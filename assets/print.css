@@ -1,0 +1,14 @@
+.sidebar,.topbar,.data-card-head .head-buttons,.filter-bar,.pagination,.mini-stats{display:none!important}
+main{margin:0!important;padding:0!important;max-width:none!important}
+.view[hidden],#dashboardView,#stocksView{display:none!important}
+#ownershipView{display:block!important}
+.data-card{border:0!important;box-shadow:none!important;overflow:visible!important}
+.data-card-head{padding:0 0 16px!important}
+.table-wrap{overflow:visible!important}
+body{font-size:10pt!important;line-height:1.35!important}
+.wide-table{min-width:0!important;font-size:9px!important}
+th{font-size:8px!important}
+td{font-size:9px!important}
+th,td{padding:6px!important}
+.row-menu{display:none!important}
+@page{size:landscape;margin:10mm}

@@ -1,0 +1,1 @@
+import os, sys; sys.path.append(os.getcwd()); from ml_weekly.universe import build_universe, UniverseStatus; df=build_universe('2026-07-27', 'data/zaiden_trader.db', min_history_days=120, min_median_value_20d=1e9); eligible=df[df['status'].isin([UniverseStatus.ELIGIBLE, UniverseStatus.CORPORATE_ACTION_WARNING])]['ticker'].tolist(); print(f'Total eligible: {len(eligible)}') 

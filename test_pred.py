@@ -1,0 +1,1 @@
+import os, sys; sys.path.append(os.getcwd()); from ml_weekly.api_handlers import start_predict_job; from pathlib import Path; print(start_predict_job('data/zaiden_trader.db', Path('models'), {'date': '2026-07-27'}))

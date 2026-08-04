@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="Zaiden Trader — Dashboard kepemilikan saham, analisis teknikal, broker activity, dan prediksi sinyal beli untuk Bursa Efek Indonesia (IDX).">
+  <title>Zaiden Trader — Equity Intelligence</title>
+  <link rel="icon" type="image/png" href="./assets/brand-icon.png">
+  <link rel="shortcut icon" type="image/png" href="./assets/brand-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/style.css?v=20260712-10">
+  <link rel="stylesheet" href="./assets/themes.css?v=20260712-01">
+  <link rel="stylesheet" href="./assets/chat.css?v=20260712-01">
+  <link rel="stylesheet" href="./assets/weekly_styles.css?v=20260727-01">
+  <link rel="stylesheet" href="./assets/print.css" media="print">
+  <!-- Early theme/settings load: prevents FOUC -->
+  <script>
+    (function(){
+      try{
+        var s=JSON.parse(localStorage.getItem('zaiden_settings_v1')||'{}');
+        var t=s.theme||'classic';
+        // Apply theme to <html> element (always available in head)
+        if(t&&t!=='classic') document.documentElement.setAttribute('data-theme',t);
+        // Store settings on <html> data attributes for body script to read
+        var fs={sm:'13px',md:'15px',lg:'17px',xl:'19px'};
+        if(s.fontSize&&fs[s.fontSize]) document.documentElement.style.setProperty('--base-font-size', fs[s.fontSize]);
+        if(!s.animation) document.documentElement.setAttribute('data-no-animation','1');
+        if(s.sidebar==='compact') document.documentElement.setAttribute('data-sidebar-compact','1');
+      }catch(e){}
+    })();
+  </script>
+</head>
+<body>
+  <div id="bootScreen" class="boot-screen">
+    <div class="boot-card"><span class="boot-logo"><img src="./assets/brand-icon.png" alt="Zaiden Trader"></span><h2>Membuka database</h2><p id="bootText">Menyiapkan data aplikasi…</p><div class="boot-track"><span id="bootBar"></span></div><small id="bootCount">Pertama kali dibuka membutuhkan beberapa saat.</small></div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-logo"><img src="./assets/brand-icon.png" alt="Zaiden Trader"></span><div><strong>Zaiden Trader<span>.</span></strong><small>Equity Intelligence</small></div></div>
+    <div class="sidebar-menu">
+      <div class="nav-label">ANALISIS PASAR</div>
+      <nav>
+        <button class="nav-item" data-view="market" aria-label="Market Pulse" title="Market Pulse"><span class="nav-icon">◉</span><span>Market Pulse</span></button>
+        <button class="nav-item" data-view="screener" aria-label="Technical Screener" title="Technical Screener"><span class="nav-icon">⌁</span><span>Technical Screener</span></button>
+        <button class="nav-item" data-view="signals" aria-label="Prediksi Sinyal" title="Prediksi Sinyal Beli"><span class="nav-icon">🎯</span><span>Prediksi Sinyal</span></button>
+        <button class="nav-item" data-view="stocklab" aria-label="Stock Lab" title="Stock Lab"><span class="nav-icon">⌕</span><span>Stock Lab</span></button>
+        <button class="nav-item" data-view="watchlist" aria-label="Watchlist Saya" title="Watchlist Saya"><span class="nav-icon">📌</span><span>Watchlist Saya</span></button>
+        <button class="nav-item" data-view="flow" aria-label="Flow dan Likuiditas" title="Flow &amp; Likuiditas"><span class="nav-icon">⇄</span><span>Flow &amp; Likuiditas</span></button>
+        <button class="nav-item" data-view="accumulation" aria-label="Akumulasi Transaksi" title="Akumulasi Transaksi"><span class="nav-icon">📊</span><span>Akumulasi Transaksi</span></button>
+        <button class="nav-item" data-view="broker" aria-label="Aktivitas Broker" title="Aktivitas Broker"><span class="nav-icon">◈</span><span>Aktivitas Broker</span></button>
+        <button class="nav-item" data-view="daily" aria-label="Data Harian" title="Data Harian"><span class="nav-icon">▦</span><span>Data Harian</span><b id="dailyBadge">—</b></button>
+      </nav>
+      <div class="nav-label nav-label-spaced" style="margin-top:6px">KECERDASAN BUATAN</div>
+      <nav>
+        <button class="nav-item" data-view="weekly" aria-label="IDX Weekly High-Confidence" title="IDX Weekly High-Confidence ML"><span class="nav-icon">📊</span><span>IDX Weekly HC</span><b style="background:linear-gradient(90deg,#10b981,#0ea5e9);color:#fff;font-size:7px;padding:1px 4px;border-radius:3px">ML</b></button>
+        <button class="nav-item" data-view="idx_intelligence" aria-label="Zaiden Fundamental Review" title="Zaiden Fundamental Review"><span class="nav-icon">🧠</span><span>Zaiden Fundamental Review</span></button>
+        <button class="nav-item" data-view="chat" aria-label="Zaiden AI Chat" title="Zaiden AI"><span class="nav-icon">💬</span><span>Zaiden AI</span><b style="background:linear-gradient(90deg,#3d7bff,#9b5de5);color:#fff;font-size:7px">AI</b></button>
+      </nav>
+
+      <div class="nav-label nav-label-spaced" style="margin-top:6px">PREFERENSI</div>
+      <nav>
+        <button class="nav-item" data-view="settings" aria-label="Pengaturan Tampilan" title="Pengaturan"><span class="nav-icon">⚙</span><span>Pengaturan</span></button>
+      </nav>
+      <div class="nav-label nav-label-spaced">DATA INTERNAL</div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard" aria-label="Dashboard" title="Dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="nav-item" data-view="ownership" aria-label="Kepemilikan di atas satu persen" title="Kepemilikan &gt;1%"><span class="nav-icon">▤</span><span>Kepemilikan &gt;1%</span><b id="ownershipBadge">—</b></button>
+        <button class="nav-item" data-view="stocks" aria-label="Master Saham IDX" title="Master Saham IDX"><span class="nav-icon">◇</span><span>Master Saham IDX</span><b id="stockBadge">—</b></button>
+      </nav>
+    </div>
+    <div class="sidebar-foot">
+      <div class="db-live"><i></i><div><b id="dbEngineLabel">Database aktif</b><small id="dbStatus">Menghubungkan…</small></div></div>
+      <button id="backupBtn" class="side-action">↓ Backup database (.db)</button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div><p class="breadcrumb">DATA PASAR MODAL / <span id="breadcrumbCurrent">DASHBOARD</span></p><h1 id="pageTitle">Dashboard Kepemilikan Saham</h1><p class="page-subtitle" id="pageSubtitle">Pantau struktur kepemilikan saham di atas 1% secara menyeluruh.</p></div>
+      <div class="top-actions"><span class="last-sync"><i></i><span>Database lokal aktif<small id="lastUpdated">SQLite · memuat status</small></span></span><button id="primaryAddBtn" class="btn primary">＋ Input data</button></div>
+    </header>
+
+    <section id="dashboardView" class="view">
+      <div class="period-strip"><div><span class="section-kicker">RINGKASAN EKSEKUTIF</span><h2>Ikhtisar data kepemilikan</h2></div><label>Periode analisis<select id="dashboardMonth"><option value="latest">Bulan terbaru</option><option value="all">Seluruh periode</option></select></label></div>
+
+      <div class="metrics-grid">
+        <article class="metric-card"><div class="metric-icon blue">▦</div><div class="metric-copy"><span>Total saham beredar</span><strong id="metricOutstanding">—</strong><small id="metricOutstandingNote">Berdasarkan master IDX</small></div></article>
+        <article class="metric-card"><div class="metric-icon violet">♙</div><div class="metric-copy"><span>Pemegang saham &gt;1%</span><strong id="metricInvestors">—</strong><small id="metricInvestorsNote">Investor unik</small></div></article>
+        <article class="metric-card"><div class="metric-icon green">◎</div><div class="metric-copy"><span>Masyarakat non warkat</span><strong id="metricNonWarkat">—</strong><small id="metricNonWarkatNote">— lembar</small></div></article>
+        <article class="metric-card"><div class="metric-icon amber">↗</div><div class="metric-copy"><span>Kepemilikan tercatat &gt;1%</span><strong id="metricRecorded">—</strong><small id="metricRecordedNote">Terhadap saham beredar emiten</small></div></article>
+      </div>
+
+      <div class="visual-grid">
+        <article class="panel top-panel"><div class="panel-head"><div><span class="section-kicker">KONSENTRASI KEPEMILIKAN</span><h3>10 posisi pemegang saham terbesar</h3></div><div class="panel-tools"><span id="topMonthLabel" class="pill">—</span></div></div><div id="topChart" class="bar-chart"></div><div id="topPager" class="mini-pager" hidden><button id="topPrevBtn" type="button" class="text-btn">← Prev</button><span id="topPageInfo">1 / 1</span><button id="topNextBtn" type="button" class="text-btn">Next →</button></div></article>
+        <article class="panel"><div class="panel-head"><div><span class="section-kicker">ASAL INVESTOR</span><h3>Lokal vs asing</h3></div></div><div id="originChart" class="origin-chart"></div></article>
+        <article class="panel"><div class="panel-head"><div><span class="section-kicker">PROFIL</span><h3>Kategori investor</h3></div></div><div id="categoryChart" class="category-chart"></div><div id="categoryPager" class="mini-pager" hidden><button id="categoryPrevBtn" type="button" class="text-btn">← Prev</button><span id="categoryPageInfo">1 / 1</span><button id="categoryNextBtn" type="button" class="text-btn">Next →</button></div></article>
+      </div>
+
+      <article class="panel snapshot-panel"><div class="panel-head"><div><span class="section-kicker">SNAPSHOT TERBARU</span><h3>Posisi kepemilikan terbesar</h3></div><button class="text-btn" data-go="ownership">Lihat seluruh data →</button></div><div class="table-wrap compact"><table><thead><tr><th>Kode</th><th>Investor</th><th>Klasifikasi</th><th>Asal</th><th class="number">Jumlah saham</th><th class="number">Persentase</th></tr></thead><tbody id="snapshotBody"></tbody></table></div></article>
+    </section>
+
+    <section id="marketView" class="view" hidden>
+      <div class="analysis-disclaimer"><span>i</span><p><b>Kondisi statistik pasar</b> — seluruh indikator dihitung dari ringkasan harian IDX dan bukan rekomendasi jual atau beli.</p><small id="marketAsOf" aria-live="polite">Memuat tanggal data…</small></div>
+
+      <div class="market-hero">
+        <div class="market-hero-copy"><span class="section-kicker">MARKET BREADTH &amp; PARTICIPATION</span><h2>Temperatur pasar dalam satu pandangan</h2><p>Ukur kekuatan pergerakan dari jumlah saham yang ikut naik, tren menengah, aktivitas transaksi, dan arus asing.</p><div class="hero-badges"><span id="marketActiveBadge">— saham aktif</span><span id="marketInactiveBadge">— tidak aktif</span></div></div>
+        <div class="score-orbit"><div class="score-ring" id="breadthScoreRing"><strong id="breadthScore">—</strong><small>breadth score</small></div><b id="breadthLabel">Menilai pasar…</b><span>Skor partisipasi 0–100</span></div>
+      </div>
+
+      <div class="metrics-grid analytics-metrics six">
+        <article class="metric-card"><div class="metric-icon green">↗</div><div class="metric-copy"><span>Naik</span><strong id="marketAdvancers">—</strong><small id="marketAdvancersNote">Saham hari ini</small></div></article>
+        <article class="metric-card"><div class="metric-icon red-soft">↘</div><div class="metric-copy"><span>Turun</span><strong id="marketDecliners">—</strong><small id="marketDeclinersNote">Saham hari ini</small></div></article>
+        <article class="metric-card"><div class="metric-icon blue">Rp</div><div class="metric-copy"><span>Nilai transaksi</span><strong id="marketValue">—</strong><small id="marketValueNote">Seluruh pasar</small></div></article>
+        <article class="metric-card"><div class="metric-icon violet">⇄</div><div class="metric-copy"><span>Net foreign</span><strong id="marketForeign">—</strong><small>Unit saham, bukan rupiah</small></div></article>
+        <article class="metric-card"><div class="metric-icon amber">M</div><div class="metric-copy"><span>Di atas SMA20</span><strong id="marketAbove20">—</strong><small>Partisipasi tren pendek</small></div></article>
+        <article class="metric-card"><div class="metric-icon teal">◆</div><div class="metric-copy"><span>New high / low 20D</span><strong id="marketHighLow">—</strong><small>Breakout dibanding 20 sesi lalu</small></div></article>
+      </div>
+
+      <div class="analytics-grid market-grid">
+        <article class="panel chart-panel span-2"><div class="panel-head"><div><span class="section-kicker">ADVANCE–DECLINE</span><h3>Partisipasi pasar dari waktu ke waktu</h3><p>Garis A/D naik ketika saham naik lebih banyak daripada saham turun.</p></div><select id="breadthDays" class="compact-select"><option value="60">60 sesi</option><option value="90" selected>90 sesi</option><option value="180">180 sesi</option><option value="260">260 sesi</option></select></div><div id="breadthChart" class="analytics-chart chart-loading">Memuat breadth…</div><div id="breadthLegend" class="chart-legend"></div></article>
+        <article class="panel participation-panel"><div class="panel-head"><div><span class="section-kicker">KOMPOSISI HARI INI</span><h3>Naik, turun, dan tetap</h3></div></div><div id="participationDonut" class="participation-donut"></div><div id="marketFacts" class="fact-list"></div></article>
+      </div>
+
+      <div class="analytics-grid ranking-grid">
+        <article class="panel"><div class="panel-head"><div><span class="section-kicker">PRICE MOVERS</span><h3 id="moversTitle">Top gainers likuid</h3></div><div class="segmented"><button class="active" data-mover="gainers">Naik</button><button data-mover="losers">Turun</button></div></div><div class="table-wrap"><table class="analytics-table"><thead><tr><th>Saham</th><th class="number">Harga</th><th class="number">1D</th><th class="number">20D</th></tr></thead><tbody id="marketMoversBody"><tr><td colspan="4" class="loading-cell">Memuat…</td></tr></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><div><span class="section-kicker">MOST ACTIVE</span><h3>Nilai transaksi terbesar</h3></div></div><div class="table-wrap"><table class="analytics-table"><thead><tr><th>Saham</th><th class="number">Nilai</th><th class="number">1D</th><th class="number">Vol. ratio</th></tr></thead><tbody id="marketActiveBody"><tr><td colspan="4" class="loading-cell">Memuat…</td></tr></tbody></table></div></article>
+      </div>
+      <article class="methodology-panel" aria-labelledby="marketMethodTitle">
+        <div class="methodology-head"><div><span class="section-kicker">CARA BACA &amp; METODOLOGI</span><h3 id="marketMethodTitle">Dari database menjadi Breadth Score</h3><p id="marketMethodProfile">Memuat sumber, cakupan, dan kualitas data…</p></div><span id="marketMethodFreshness" class="freshness-badge">Memeriksa…</span></div>
+        <div class="logic-flow" aria-label="Alur perhitungan Market Pulse"><div><i>1</i><b>SQLite terbaru</b><span>Ambil satu snapshot tanggal perdagangan terakhir.</span></div><em>→</em><div><i>2</i><b>Universe aktif</b><span>Pisahkan naik, turun, tetap aktif, dan tidak bertransaksi.</span></div><em>→</em><div><i>3</i><b>Partisipasi tren</b><span>Ukur saham aktif di atas SMA20 dan SMA50.</span></div><em>→</em><div><i>4</i><b>Skor 0–100</b><span>Gabungkan tiga komponen dengan bobot terukur.</span></div></div>
+        <div class="methodology-grid"><div class="method-card"><b>Rumus Breadth Score</b><p id="marketScoreEquation">40% rasio naik + 35% di atas SMA20 + 25% di atas SMA50.</p><div id="marketScoreWeights" class="weight-breakdown"></div></div><div class="method-card"><b>Zona pembacaan</b><div class="score-zones"><span class="very-weak">0–34<small>Sangat lemah</small></span><span class="weak">35–44<small>Lemah</small></span><span class="balanced">45–54<small>Netral</small></span><span class="positive-zone">55–64<small>Positif</small></span><span class="strong">65–100<small>Kuat</small></span></div><p>Garis A/D di-reset ke nol pada awal rentang yang dipilih; arah garis lebih penting daripada satu titik.</p></div></div>
+      </article>
+    </section>
+
+    <section id="screenerView" class="view" hidden>
+      <div class="analysis-disclaimer"><span>i</span><p><b>Screener kondisi teknikal</b> — gunakan sebagai alat mempersempit riset, lalu periksa chart dan risiko secara mandiri.</p><small id="screenerAsOf">—</small></div>
+      <article class="data-card screener-card">
+        <div class="data-card-head"><div><span class="section-kicker">MULTI-FACTOR SCREENING</span><h2>Temukan saham sesuai kondisi pasar</h2><p>Filter seluruh saham pada snapshot terbaru memakai tren, momentum, aktivitas, likuiditas, volatilitas, dan akumulasi asing.</p></div><button id="screenerExportBtn" class="btn secondary">↓ Export hasil CSV</button></div>
+        <div class="preset-strip" id="screenerPresets">
+          <button class="active" data-preset="all">Semua</button><button data-preset="momentum">Momentum</button><button data-preset="breakout">Breakout 20D</button><button data-preset="volume">Volume spike</button><button data-preset="foreign">Akumulasi asing</button><button data-preset="oversold">Oversold</button><button data-preset="liquid">Paling likuid</button>
+        </div>
+        <div class="filter-bar analytics-filter">
+          <label class="search-box"><span>⌕</span><input id="screenerSearch" placeholder="Cari kode atau nama emiten…"></label>
+          <select id="screenerTrend"><option value="">Semua tren</option><option value="Uptrend">Uptrend</option><option value="Sideways">Sideways</option><option value="Downtrend">Downtrend</option></select>
+          <select id="screenerLiquidity"><option value="">Semua likuiditas</option><option value="Tinggi">Likuiditas tinggi</option><option value="Menengah">Likuiditas menengah</option><option value="Rendah">Likuiditas rendah</option></select>
+          <select id="screenerSort"><option value="setup_score">Skor tertinggi</option><option value="return_20d">Return 20D</option><option value="activity_confirmation_ratio">Activity ratio</option><option value="foreign_net_volume_pct_20">Net foreign / volume</option><option value="avg_value_20">Likuiditas</option><option value="volatility20">Volatilitas</option></select>
+          <select id="screenerPageSize"><option value="20">20 baris</option><option value="50" selected>50 baris</option><option value="100">100 baris</option></select>
+        </div>
+        <div class="screener-summary"><span id="screenerResultCount" aria-live="polite">Menyiapkan screener…</span><small><b>Skor setup</b> merangkum tujuh kondisi terukur dan tidak memprediksi harga masa depan.</small></div>
+        <div class="table-wrap"><table class="wide-table screener-table"><thead><tr><th>Saham</th><th>Kondisi</th><th class="number">Adj. harga</th><th class="number">1D</th><th class="number">20D</th><th class="number">RSI14</th><th class="number">vs SMA20</th><th class="number">Activity ratio</th><th class="number">ATR14</th><th class="number">Net asing 20D</th><th class="number">Avg nilai 20D</th><th class="number">Skor</th></tr></thead><tbody id="screenerBody"><tr><td colspan="12" class="loading-cell">Menghitung indikator pasar…</td></tr></tbody></table></div>
+        <div class="pagination"><span id="screenerPageInfo">—</span><div><button id="screenerPrev">← Sebelumnya</button><span id="screenerPageNumber">1</span><button id="screenerNext">Berikutnya →</button></div></div>
+      </article>
+      <article class="methodology-panel" aria-labelledby="screenerMethodTitle"><div class="methodology-head"><div><span class="section-kicker">AUDITABLE SCREENING LOGIC</span><h3 id="screenerMethodTitle">Setiap skor dapat ditelusuri ke tujuh faktor</h3><p id="screenerMethodProfile">261 sesi per saham → harga adjusted → indikator → preset → ranking.</p></div><span class="method-version" id="analyticsVersion">—</span></div><div class="score-weight-bar" id="scoreWeightBar" aria-label="Bobot Condition Score"></div><div class="score-weight-legend" id="scoreWeightLegend"></div><div class="methodology-grid three"><div class="method-card"><b>Tren &amp; momentum</b><p>SMA memakai harga backward-adjusted dari reference price IDX. RSI14 memakai simple-average/Cutler; ≤30 oversold dan ≥70 overbought.</p></div><div class="method-card"><b>Aktivitas &amp; likuiditas</b><p>Ratio membandingkan sesi terakhir dengan 20 sesi sebelumnya. Konfirmasi skor mengutamakan turnover agar lebih tahan stock split.</p></div><div class="method-card"><b>Batas penggunaan</b><p id="screenerMethodNotes">Condition Score v1 belum backtested dan baru diterbitkan setelah sedikitnya 50 sesi.</p></div></div></article>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PREDIKSI SINYAL — Technical Signal Engine
+         ═══════════════════════════════════════════════════════════════════ -->
+    <section id="signalsView" class="view" hidden>
+      <div class="topbar" style="margin-bottom:8px">
+        <div>
+          <span class="section-kicker">KECERDASAN TEKNIKAL IDX</span>
+          <h1>Prediksi Sinyal Beli</h1>
+          <p class="page-subtitle">Engine menganalisis 989 saham IDX dengan 15+ indikator teknikal — SMA/EMA/MACD/RSI/Stoch/ADX/BB/OBV/ATR + Foreign Flow. Target Profit &amp; Stop Loss dihitung berbasis ATR × Fibonacci.</p>
+        </div>
+        <div class="top-actions">
+          <div class="last-sync">
+            <i></i>
+            <div><span>Signal Engine</span><small>Auto-refresh 5 mnt</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Horizon tabs -->
+      <div class="sig-horizon-tabs" id="signalsHorizonTabs">
+        <button class="sig-horizon-btn active" data-horizon="1d">
+          <span class="sig-horizon-icon">⚡</span><span class="sig-horizon-label">1 Hari</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="1w">
+          <span class="sig-horizon-icon">📅</span><span class="sig-horizon-label">1 Minggu</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="1m">
+          <span class="sig-horizon-icon">📆</span><span class="sig-horizon-label">1 Bulan</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="3m">
+          <span class="sig-horizon-icon">📊</span><span class="sig-horizon-label">3 Bulan</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="6m">
+          <span class="sig-horizon-icon">📈</span><span class="sig-horizon-label">6 Bulan</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="1y">
+          <span class="sig-horizon-icon">🌟</span><span class="sig-horizon-label">1 Tahun</span>
+        </button>
+        <button class="sig-horizon-btn" data-horizon="gt1y">
+          <span class="sig-horizon-icon">💎</span><span class="sig-horizon-label">&gt; 1 Tahun</span>
+        </button>
+      </div>
+
+      <!-- Meta bar (injected by JS) -->
+      <div id="signalsMeta"></div>
+
+      <!-- Controls (injected by JS) -->
+      <div id="signalsControls"></div>
+
+      <!-- Card grid (injected by JS) -->
+      <div class="signals-grid" id="signalsGrid">
+        <div class="signals-loading">
+          <div class="signals-spinner"></div>
+          <div><strong>Memuat Prediksi Sinyal…</strong><p style="margin:4px 0 0;opacity:.6;font-size:13px">Pilih horizon untuk memulai analisis.</p></div>
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="analysis-disclaimer" style="margin-top:24px">
+        <span>⚠</span>
+        <p><b>Perhatian Risiko</b> — Sinyal ini dibuat oleh algoritma berbasis data historis dan indikator teknikal. <b>Bukan merupakan rekomendasi investasi resmi.</b> Selalu lakukan riset mandiri, kelola risiko, dan konsultasi dengan penasihat keuangan sebelum bertransaksi. Past performance is not indicative of future results.</p>
+      </div>
+    </section>
+    <section id="stocklabView" class="view" hidden>
+      <div class="lab-toolbar panel"><div><span class="section-kicker">ZAIDEN STOCK 360</span><h2>Bedah satu saham secara menyeluruh</h2><p>Harga, tren, risiko, aktivitas, order book EOD, arus asing, dan kepemilikan &gt;1% dalam satu layar.</p></div><form id="stockLabForm"><label class="ticker-input"><span>IDX</span><input id="stockLabCode" list="analyticsTickerList" value="BBCA" maxlength="15" autocomplete="off" aria-label="Kode saham"></label><select id="stockLabDays" aria-label="Rentang analisis"><option value="5">1 minggu</option><option value="15">3 minggu</option><option value="21">1 bulan</option><option value="63">3 bulan</option><option value="126">6 bulan</option><option value="252" selected>1 tahun</option><option value="504">2 tahun</option><option value="756">3 tahun</option><option value="1260">5 tahun</option><option value="2000">Semua data (±6 tahun)</option></select><button class="btn primary" type="submit">Analisis</button><button id="stockLabRefresh" class="btn secondary icon-only" type="button" title="Perbarui data saham">↻</button></form></div>
+      <datalist id="analyticsTickerList"></datalist>
+      <div id="stockLabLoading" class="analysis-loading"><span></span><b>Menyiapkan Stock Lab…</b><small>Menghitung indikator dan menyatukan data kepemilikan.</small></div>
+      <div id="stockLabContent" hidden>
+        <div class="stock-profile-hero"><div><span id="labTicker" class="hero-ticker">—</span><span id="labBoard" class="board-badge">—</span><h2 id="labCompany">—</h2><p id="labProfileNote">—</p></div><div class="hero-price"><small>Harga penutupan</small><strong id="labClose">—</strong><span id="labReturn1">—</span></div></div>
+        <div class="metrics-grid analytics-metrics six lab-metrics">
+          <article class="metric-card"><div class="metric-copy"><span>Return 20 sesi</span><strong id="labReturn20">—</strong><small id="labReturn60">— dalam 60 sesi</small></div></article>
+          <article class="metric-card"><div class="metric-copy"><span>Struktur tren</span><strong id="labTrend">—</strong><small id="labTrendNote">—</small></div></article>
+          <article class="metric-card"><div class="metric-copy"><span>RSI14 / momentum</span><strong id="labRsi">—</strong><small id="labMomentum">—</small></div></article>
+          <article class="metric-card"><div class="metric-copy"><span>ATR14 / volatilitas</span><strong id="labAtr">—</strong><small id="labVolatility">—</small></div></article>
+          <article class="metric-card"><div class="metric-copy"><span>Aktivitas vs normal</span><strong id="labVolumeRatio">—</strong><small id="labLiquidity">—</small></div></article>
+          <article class="metric-card"><div class="metric-copy"><span>Net asing 20 sesi</span><strong id="labForeign">—</strong><small id="labForeignConsistency">—</small></div></article>
+        </div>
+        <div class="analytics-grid stock-chart-grid"><article class="panel span-2"><div class="panel-head"><div><span class="section-kicker">PRICE STRUCTURE</span><h3>Adjusted close, SMA20, dan SMA50</h3><p>Seri ditambatkan ke close terbaru dan disambungkan dengan reference price resmi IDX saat corporate action.</p></div><div class="chart-key"><span class="close-key">Adj. close</span><span class="sma20-key">SMA20</span><span class="sma50-key">SMA50</span></div></div><div id="stockPriceChart" class="analytics-chart tall"></div><div id="stockVolumeChart" class="volume-chart"></div><div id="stockChartInspector" class="chart-inspector" aria-live="polite">Klik titik pada grafik untuk melihat tanggal, harga, volume, dan foreign flow.</div></article><article class="panel"><div class="panel-head"><div><span class="section-kicker">RSI 14</span><h3>Momentum harga</h3></div></div><div id="stockRsiChart" class="analytics-chart rsi-chart"></div><div class="rsi-bands"><span>≤30 Oversold</span><span>50 Garis tengah</span><span>≥70 Overbought</span></div><div id="stockTags" class="tag-cloud"></div></article></div>
+        <div class="analytics-grid stock-insight-grid">
+          <article class="panel"><div class="panel-head"><div><span class="section-kicker">PRICE LEVELS</span><h3>Support &amp; resistance statistik</h3></div></div><div id="stockLevels" class="stat-list"></div></article>
+          <article class="panel"><div class="panel-head"><div><span class="section-kicker">ORDER BOOK EOD</span><h3>Bid, offer, dan depth</h3></div></div><div id="stockOrderBook" class="stat-list"></div><small class="panel-footnote">Snapshot akhir hari, bukan real-time.</small></article>
+          <article class="panel"><div class="panel-head"><div><span class="section-kicker">FACTOR CHECK</span><h3>Alasan di balik skor setup</h3></div><span id="labScore" class="score-chip">—</span></div><div id="stockFactorCheck" class="factor-check"></div></article>
+        </div>
+        <article class="panel ownership-lab-panel"><div class="panel-head"><div><span class="section-kicker">INTEGRASI KEPEMILIKAN &gt;1%</span><h3>Pemegang saham besar pada snapshot terakhir</h3><p id="stockOwnershipSummary">—</p></div></div><div id="stockOwnershipContent"></div></article>
+        <article class="methodology-panel" aria-labelledby="stockMethodTitle"><div class="methodology-head"><div><span class="section-kicker">EVIDENCE CHAIN</span><h3 id="stockMethodTitle">Cara membaca Stock Lab tanpa bergantung pada satu indikator</h3><p id="stockDataQuality">Memeriksa cakupan indikator dan penyesuaian reference price…</p></div><span id="stockCoverageBadge" class="freshness-badge">—</span></div><div class="logic-flow stock-flow"><div><i>1</i><b>Tren</b><span>Close vs SMA20/SMA50.</span></div><em>→</em><div><i>2</i><b>Momentum</b><span>RSI &amp; return adjusted.</span></div><em>→</em><div><i>3</i><b>Risiko</b><span>ATR, volatilitas, drawdown.</span></div><em>→</em><div><i>4</i><b>Konfirmasi</b><span>Turnover, value, foreign flow.</span></div><em>→</em><div><i>5</i><b>Konteks</b><span>Ownership &amp; order book EOD.</span></div></div><div class="methodology-grid three"><div class="method-card"><b>Level statistik</b><p>Support/resistance adalah minimum low dan maksimum high 20/55 sesi adjusted, bukan ramalan titik balik.</p></div><div class="method-card"><b>Penyesuaian harga</b><div id="stockAdjustmentEvents"><p>Belum ada saham yang dianalisis.</p></div></div><div class="method-card"><b>Catatan kualitas</b><div id="stockMethodNotes"></div></div></div></article>
+      </div>
+    </section>
+
+    <section id="flowView" class="view" hidden>
+      <div class="analysis-disclaimer"><span>i</span><p><b>Flow memakai volume saham</b> — net foreign adalah beli asing dikurangi jual asing, bukan nilai rupiah.</p><small id="flowAsOf">—</small></div>
+      <div class="flow-toolbar"><div><span class="section-kicker">CAPITAL FLOW &amp; MARKET ACTIVITY</span><h2>Ikuti akumulasi, distribusi, dan lonjakan aktivitas</h2></div><div class="segmented" id="flowWindow"><button data-window="5">5 sesi</button><button class="active" data-window="20">20 sesi</button></div></div>
+      <div class="analytics-grid flow-top-grid"><article class="panel span-2"><div class="panel-head"><div><span class="section-kicker">MARKET FOREIGN FLOW</span><h3 id="flowHistoryTitle">Net foreign seluruh pasar</h3><p>Batang hijau berarti beli asing bersih; merah berarti jual asing bersih. Klik batang untuk detail tanggal.</p></div><label class="flow-history-select"><span>Riwayat grafik</span><select id="flowHistoryDays"><option value="60">60 sesi</option><option value="126">6 bulan</option><option value="252" selected>1 tahun</option><option value="504">2 tahun</option><option value="756">3 tahun</option><option value="1260">5 tahun</option><option value="2000">Semua data</option></select></label></div><div id="marketFlowScroller" class="flow-chart-scroll" tabindex="0" aria-label="Grafik dapat digeser ke kiri untuk melihat data asing yang lebih lama"><div id="marketFlowChart" class="analytics-chart flow-history-chart"></div></div><div class="flow-history-nav"><button id="flowScrollOlder" type="button" class="text-btn">← Data lebih lama</button><span id="flowHistoryRange">Memuat rentang data…</span><button id="flowScrollLatest" type="button" class="text-btn">Data terbaru →</button></div><div id="flowChartInspector" class="chart-inspector" aria-live="polite">Klik batang untuk melihat net foreign, nilai transaksi, dan breadth pada tanggal tersebut.</div></article><article class="panel"><div class="panel-head"><div><span class="section-kicker">CARA MEMBACA</span><h3>Konfirmasi, bukan sinyal tunggal</h3></div></div><div class="reading-guide"><div><b>Akumulasi sehat</b><span>Net positif, konsisten, dan harga tidak terlalu jauh dari tren.</span></div><div><b>Unusual activity</b><span>Volume, nilai, dan frekuensi naik bersamaan dibanding normalnya.</span></div><div><b>Likuiditas</b><span>Nilai transaksi rata-rata tinggi membantu eksekusi, namun tidak menghapus risiko.</span></div></div></article></div>
+      <article class="data-card flow-card"><div class="flow-tabs" id="flowTabs"><button class="active" data-flow="accumulation">Akumulasi asing</button><button data-flow="distribution">Distribusi asing</button><button data-flow="unusual_activity">Unusual activity</button><button data-flow="most_liquid">Paling likuid</button></div><div class="table-wrap"><table class="wide-table flow-table"><thead><tr><th>Saham</th><th>Kondisi</th><th class="number">Harga</th><th class="number">Return</th><th class="number" id="flowNetHeader">Net asing 20D</th><th class="number">Net / volume</th><th class="number">Konsistensi</th><th class="number">Vol. ratio</th><th class="number">Value ratio</th><th class="number">Freq. ratio</th><th class="number">Avg nilai</th><th class="number">Price impact<br><small>% / Rp1M</small></th><th class="number">Skor</th></tr></thead><tbody id="flowBody"><tr><td colspan="13" class="loading-cell">Memuat flow dan likuiditas…</td></tr></tbody></table></div><div id="flowDetailPanel" class="flow-detail-panel" aria-live="polite">Klik satu baris untuk membuka arti setiap metrik, konteks harga–flow, dan batas interpretasinya.</div></article>
+      <article class="methodology-panel" aria-labelledby="flowMethodTitle"><div class="methodology-head"><div><span class="section-kicker">FLOW INTERPRETATION MAP</span><h3 id="flowMethodTitle">Flow adalah konteks; harga tetap perlu mengonfirmasi</h3><p id="flowMethodWindow">Ranking lintas saham memakai net foreign sebagai % volume agar tidak bias saham murah.</p></div></div><div class="flow-matrix"><div class="matrix-axis-y">FLOW</div><div class="matrix-cell constructive"><b>Harga naik + flow masuk</b><span>Konfirmasi paling konstruktif; tetap cek posisi terhadap resistance.</span></div><div class="matrix-cell absorption"><b>Harga turun + flow masuk</b><span>Potensi absorption; tunggu harga berhenti membuat low baru.</span></div><div class="matrix-cell caution"><b>Harga naik + flow keluar</b><span>Rally tanpa dukungan flow; waspadai distribusi.</span></div><div class="matrix-cell defensive"><b>Harga turun + flow keluar</b><span>Tekanan harga dan flow searah; kondisi defensif.</span></div><div class="matrix-axis-x">ARAH HARGA →</div></div><div class="methodology-grid three"><div class="method-card"><b>Net foreign</b><p>Beli asing − jual asing dalam lembar. Kolom Net/volume menormalkan ukuran emiten; estimasi nilai memakai close EOD.</p></div><div class="method-card"><b>Konsistensi</b><p>Hari net positif dibagi hari yang memiliki aktivitas asing dalam window 5 atau 20 sesi terpilih.</p></div><div class="method-card"><b>Unusual activity</b><p>Geometric mean dari volume, value, dan frequency ratio; ketiganya dibanding rata-rata 20 sesi sebelumnya.</p></div></div></article>
+    </section>
+
+    <section id="dailyView" class="view" hidden>
+      <div class="daily-hero"><div><span class="section-kicker">SQLITE DATA EXPLORER</span><h2>Lihat isi ringkasan_saham_harian tanpa batas plugin</h2><p>Seluruh baris tetap berada di file database; halaman hanya mengambil potongan hasil SQL yang sedang Anda lihat.</p></div><div class="daily-hero-actions"><div class="database-pill"><span>SQLite</span><b>ringkasan_saham_harian</b><small id="dailyRange">Memuat rentang…</small></div><div class="sync-action-group"><button id="syncDataBtn" class="btn sync-btn" type="button">↻ Perbarui Saham dari IDX</button><button id="syncBrokerBtn" class="btn sync-btn broker-sync-btn" type="button">↻ Perbarui Broker dari IDX</button></div><small id="syncStatus" class="sync-status" aria-live="polite">Siap memeriksa data terbaru.</small><small id="brokerSyncStatus" class="sync-status" aria-live="polite"></small></div></div>
+
+      <article class="data-card daily-card">
+        <form id="dailyFilterForm" class="filter-bar daily-filter"><label class="search-box"><span>⌕</span><input id="dailyCode" list="analyticsTickerList" placeholder="Kode saham, contoh BBCA"></label><label class="date-filter"><span>Dari</span><input id="dailyFrom" type="date"></label><label class="date-filter"><span>Sampai</span><input id="dailyTo" type="date"></label><select id="dailyPageSize"><option value="20">20 baris</option><option value="50" selected>50 baris</option><option value="100">100 baris</option></select><button class="btn primary" type="submit">Tampilkan</button><button id="dailyClearBtn" class="btn secondary" type="button">Reset</button></form>
+        <div class="daily-summary"><div><span>Total hasil</span><b id="dailyTotal">—</b></div><div><span>Filter aktif</span><b id="dailyFilterLabel">Semua data</b></div><button id="dailyExportBtn" class="btn secondary">↓ Export halaman CSV</button></div>
+        <div class="table-wrap"><table class="wide-table daily-table"><thead><tr><th>Tanggal</th><th>Saham</th><th>Nama perusahaan</th><th class="number">Reference</th><th class="number">High</th><th class="number">Low</th><th class="number">Close</th><th class="number">Δ harga (poin)</th><th class="number">Volume</th><th class="number">Nilai transaksi</th><th class="number">Frekuensi</th><th class="number">Beli asing</th><th class="number">Jual asing</th><th class="number">Net asing</th><th class="number">Bid EOD</th><th class="number">Offer EOD</th></tr></thead><tbody id="dailyBody"><tr><td colspan="16" class="loading-cell">Memuat data harian…</td></tr></tbody></table></div>
+        <div class="pagination"><span id="dailyPageInfo">—</span><div><button id="dailyPrev">← Sebelumnya</button><span id="dailyPageNumber">1</span><button id="dailyNext">Berikutnya →</button></div></div>
+      </article>
+      <article class="methodology-panel" aria-labelledby="dailyMethodTitle"><div class="methodology-head"><div><span class="section-kicker">DATABASE PROVENANCE</span><h3 id="dailyMethodTitle">Isi tabel, asal data, dan cara halaman bekerja</h3><p id="databaseProvenance">Memuat profil database aktif…</p></div><span id="dailyQualityBadge" class="freshness-badge">—</span></div><div class="logic-flow"><div><i>1</i><b>File SQLite penuh</b><span id="dailyMethodRows">Semua data tersimpan lokal.</span></div><em>→</em><div><i>2</i><b>SQL filter</b><span>Kode dan rentang tanggal diproses di server lokal.</span></div><em>→</em><div><i>3</i><b>Pagination</b><span>Maksimum 100 baris dikirim per halaman.</span></div><em>→</em><div><i>4</i><b>CSV halaman</b><span>Ekspor hanya hasil yang sedang terlihat.</span></div></div><div class="methodology-grid three"><div class="method-card"><b>Harga</b><p><code>sebelumnya</code> adalah reference price resmi. Δ harga = close − reference. High/low/close adalah data mentah EOD.</p></div><div class="method-card"><b>Foreign</b><p>Beli, jual, dan net asing memakai lembar saham, bukan rupiah. Net = beli − jual.</p></div><div class="method-card"><b>Order book</b><p>Bid/offer dan depth merupakan snapshot akhir hari; tidak menggambarkan antrean real-time.</p></div></div></article>
+    </section>
+
+    <section id="accumulationView" class="view" hidden>
+      <div class="daily-hero">
+        <div>
+          <span class="section-kicker">ANALISIS RENTANG WAKTU</span>
+          <h2>Akumulasi Transaksi Saham</h2>
+          <p>Analisis akumulasi volume, nilai, frekuensi, net asing, VWAP, serta return harga dalam berbagai periode.</p>
+        </div>
+        <div class="daily-hero-actions">
+          <div class="database-pill">
+            <span>SQLite</span>
+            <b>akumulasi_transaksi</b>
+            <small id="accumulationRange">Harian s.d. 5 Tahunan &amp; Semua Data</small>
+          </div>
+        </div>
+      </div>
+
+      <article class="data-card">
+        <div class="filter-bar" style="border-bottom: 1px solid var(--line); justify-content: space-between; align-items: center;">
+          <div class="segmented" id="accumulationTab">
+            <button class="active" data-tab="all">Semua Saham</button>
+            <button data-tab="stock">Per Saham</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <form id="accumulationStockForm" style="display: none; align-items: center; gap: 7px; margin: 0;">
+              <label class="ticker-input" style="border: 1px solid #dce3ec; border-radius: 8px; background: #fff; display: flex; align-items: center; overflow: hidden; height: 35px;">
+                <span style="padding: 9px; background: #eef3fb; color: #3b68bd; font-size: .67rem; font-weight: 850;">IDX</span>
+                <input id="accumulationTicker" list="analyticsTickerList" value="BBCA" maxlength="15" autocomplete="off" style="width: 80px; border: 0; outline: 0; padding: 8px 10px; font-weight: 850; text-transform: uppercase;">
+              </label>
+            </form>
+            <div class="drp-wrap" id="accDrpWrap">
+              <button class="drp-trigger" id="accDrpBtn">
+                <span class="drp-icon">&#128197;</span>
+                <span id="accDrpLabel">28 hari terakhir</span>
+                <span class="drp-chevron">&#9660;</span>
+              </button>
+              <!-- DRP panel injected here by drp.js -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- MODE SEMUA SAHAM -->
+        <div id="accumulationAllPanel">
+          <div class="filter-bar" style="background:#fbfcfd; border-bottom: 1px solid var(--line);">
+            <label class="search-box"><span class="nav-icon">⌕</span><input id="accumulationAllSearch" placeholder="Cari kode atau nama emiten…"></label>
+            <button id="accumulationAllExportBtn" class="btn secondary" style="margin-left: auto;">↓ Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="wide-table">
+              <thead>
+                <tr>
+                  <th style="cursor: pointer;" data-sort="code">Kode ↕</th>
+                  <th style="cursor: pointer;" data-sort="name">Nama Emiten ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="active_days">Hari ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="start_price">Awal ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="end_price">Akhir ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="change_pct">Return ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="volume">Volume ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="value">Nilai Transaksi ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="net_foreign">Net Asing (S) ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="net_foreign_value_est">Est Net Value (Rp) ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="vwap">VWAP ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="low">Low ↕</th>
+                  <th class="number" style="cursor: pointer;" data-sort="high">High ↕</th>
+                </tr>
+              </thead>
+              <tbody id="accumulationAllBody">
+                <tr><td colspan="13" class="loading-cell">Memuat data akumulasi…</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span id="accumulationAllPageInfo">Menampilkan 0–0 dari 0 data</span>
+            <div>
+              <button id="accumulationAllPrev">← Sebelumnya</button>
+              <span id="accumulationAllPageNumber">1</span>
+              <button id="accumulationAllNext">Berikutnya →</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- MODE PER SAHAM -->
+        <div id="accumulationStockPanel" style="display: none;">
+          <div class="stock-profile-hero" style="margin: 15px; background: linear-gradient(120deg,#131f34,#1c3352); padding: 18px 22px;">
+            <div>
+              <span id="accumulationStockTicker" class="hero-ticker" style="background: #7857d8;">—</span>
+              <span id="accumulationStockBoard" class="board-badge">—</span>
+              <h2 id="accumulationStockCompany" style="margin: 6px 0 3px; font-size: 1.2rem;">—</h2>
+              <p id="accumulationStockNote" style="font-size: .65rem; color: #8fa7ca;">—</p>
+            </div>
+            <div class="hero-price" style="text-align: right;">
+              <small>Total Akumulasi Asing</small>
+              <strong id="accumulationStockTotalNet" style="font-size: 1.6rem;">—</strong>
+              <span id="accumulationStockAdvice" style="font-size: .75rem; font-weight: 750;">—</span>
+            </div>
+          </div>
+          
+          <!-- Visual SVG Chart -->
+          <div class="panel" style="margin: 15px; border: 1px solid var(--line); border-radius: 12px; padding: 19px;">
+            <div class="panel-head" style="margin-bottom: 12px;">
+              <div>
+                <span class="section-kicker">GRAFIK HISTORIS</span>
+                <h3>Pergerakan Harga, VWAP, &amp; Net Asing per Periode</h3>
+              </div>
+              <div class="chart-key" style="display: flex; gap: 11px; font-size: .65rem;">
+                <span class="close-key" style="--legend:#2f68e8;">Harga Akhir</span>
+                <span class="sma20-key" style="--legend:#d89422;">VWAP</span>
+                <span class="green" style="--legend:#169768;">Net Buy Asing</span>
+                <span class="red" style="--legend:#d94355;">Net Sell Asing</span>
+              </div>
+            </div>
+            <div id="accumulationStockChart" class="analytics-chart" style="min-height: 220px;"></div>
+          </div>
+
+          <div class="filter-bar" style="background:#fbfcfd; border-bottom: 1px solid var(--line); justify-content: space-between;">
+            <span style="align-self: center; font-size: var(--fs-sm); font-weight: 750; color: var(--muted);" id="accumulationStockTableTitle">Tabel Riwayat Breakdown</span>
+            <button id="accumulationStockExportBtn" class="btn secondary">↓ Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="wide-table">
+              <thead>
+                <tr>
+                  <th>Periode</th>
+                  <th>Mulai</th>
+                  <th>Selesai</th>
+                  <th class="number">Hari</th>
+                  <th class="number">Awal</th>
+                  <th class="number">Akhir</th>
+                  <th class="number">Return</th>
+                  <th class="number">Volume</th>
+                  <th class="number">Nilai Transaksi</th>
+                  <th class="number">Net Asing (S)</th>
+                  <th class="number">Est Net Value (Rp)</th>
+                  <th class="number">VWAP</th>
+                  <th class="number">Low</th>
+                  <th class="number">High</th>
+                </tr>
+              </thead>
+              <tbody id="accumulationStockBody">
+                <tr><td colspan="14" class="loading-cell">Pilih saham dan tekan Analisis…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- ═══════════════════════ BROKER VIEW ═══════════════════════ -->
+    <section id="brokerView" class="view" hidden>
+      <div class="daily-hero">
+        <div>
+          <span class="section-kicker">ANALISIS BROKER</span>
+          <h2>Aktivitas Broker Anggota Bursa</h2>
+          <p>Papan harian, tren bulanan, profil lengkap, dan direktori 107 broker IDX.</p>
+          <div class="sync-action-group" style="margin-top:12px">
+            <button id="brokerSyncBtn" class="btn primary">🔄 Perbarui Data IDX</button>
+            <div id="brokerSyncStatus" class="sync-status" style="margin-left: 8px; display: flex; align-items: center; color: var(--text-muted); font-size: 13px;"></div>
+          </div>
+        </div>
+        <div class="daily-hero-badge" style="text-align:right">
+          <span style="font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;opacity:.6">SQLite</span>
+          <b>ringkasan_broker_harian</b>
+          <small id="brokerHeroRange" style="display:block; margin-top:4px; font-weight:bold; color:var(--text-bright)">Data Terakhir: <span id="brokerLatestDateHero">—</span></small>
+        </div>
+      </div>
+
+      <!-- Sub-view tabs -->
+      <div class="filter-bar" style="border-bottom:1px solid var(--line);gap:4px">
+        <button class="broker-tab-btn btn secondary active" data-sub="daily">📅 Papan Harian</button>
+        <button class="broker-tab-btn btn secondary" data-sub="monthly">📈 Tren Bulanan</button>
+        <button class="broker-tab-btn btn secondary" data-sub="profile">🔍 Per Broker</button>
+        <button class="broker-tab-btn btn secondary" data-sub="master">📋 Master Broker</button>
+      </div>
+
+      <!-- ─── 1. PAPAN HARIAN ─────────────────────────────────────── -->
+      <div id="brokerDaily" class="broker-sub">
+        <!-- summary stats -->
+        <div class="mini-stats">
+          <div><span>Total Nilai Pasar</span><b id="brokerDailyStatNilai">—</b></div>
+          <div><span>Total Volume</span><b id="brokerDailyStatVolume">—</b></div>
+          <div><span>Total Frekuensi</span><b id="brokerDailyStatFreq">—</b></div>
+          <div><span>Broker Aktif</span><b id="brokerDailyStatCount">—</b></div>
+        </div>
+        <div class="broker-range-info" id="brokerDailyRangeInfo"></div>
+
+        <!-- Chart area -->
+        <div class="analytics-card" style="padding:16px 20px">
+          <div class="chart-row-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <span class="section-kicker">TOP 10 NILAI TRANSAKSI</span>
+              <h3 style="margin:2px 0 0">Market Share Broker <span id="brokerDailyDate">—</span></h3>
+            </div>
+          </div>
+          <div id="brokerDailyChart" style="min-height:180px"></div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar" style="justify-content:space-between">
+          <div style="display:flex;gap:8px;align-items:center">
+            <label class="search-box"><span>⌕</span><input id="brokerDailySearch" placeholder="Cari kode / nama broker…" autocomplete="off"></label>
+            <!-- Date Range Picker trigger -->
+            <div id="brokerDrpWrap" class="drp-wrap">
+              <button id="brokerDrpBtn" class="drp-trigger" type="button">
+                <span class="drp-icon">📅</span>
+                <span id="brokerDrpLabel">Memuat…</span>
+                <span class="drp-chevron">▾</span>
+              </button>
+            </div>
+          </div>
+          <button id="brokerDailyExportBtn" class="btn secondary">↓ Export CSV</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="brokerDailyTable" class="wide-table">
+            <thead>
+              <tr>
+                <th class="number" data-sort="rank">#</th>
+                <th data-sort="code">Kode</th>
+                <th>Nama Broker</th>
+                <th class="number" data-sort="nilai">Nilai Transaksi ↕</th>
+                <th class="number" data-sort="share_nilai">Share Nilai ↕</th>
+                <th class="number" data-sort="volume">Volume ↕</th>
+                <th class="number" data-sort="frekuensi">Frekuensi ↕</th>
+                <th class="number" data-sort="share_frekuensi">Share Freq ↕</th>
+              </tr>
+            </thead>
+            <tbody id="brokerDailyBody">
+              <tr><td colspan="8" class="loading-cell">Memuat ranking broker harian…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="brokerDailyPageInfo">—</span>
+          <div>
+            <button id="brokerDailyPrev">← Sebelumnya</button>
+            <span id="brokerDailyPageNum">1 / 1</span>
+            <button id="brokerDailyNext">Berikutnya →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── 2. TREN BULANAN ─────────────────────────────────────── -->
+      <div id="brokerMonthly" class="broker-sub" hidden>
+        <div class="filter-bar" style="justify-content:space-between">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="brokerMonthlyMode">
+              <option value="all">Seluruh Pasar</option>
+              <option value="broker">Per Broker</option>
+            </select>
+            <span id="brokerMonthlyCodeWrap" style="display:none;gap:6px;align-items:center">
+              <input id="brokerMonthlyCode" list="brokerCodeList" placeholder="Kode broker (cth: XL)" style="width:140px" autocomplete="off">
+              <button id="brokerMonthlyLoadBtn" class="btn primary" style="padding:6px 12px">Tampilkan</button>
+            </span>
+            <select id="brokerMonthlyMetric">
+              <option value="total_nilai">Nilai Transaksi</option>
+              <option value="total_volume">Volume</option>
+              <option value="total_frekuensi">Frekuensi</option>
+            </select>
+          </div>
+          <button id="brokerMonthlyExportBtn" class="btn secondary">↓ Export CSV</button>
+        </div>
+
+        <div class="analytics-card" style="padding:16px 20px">
+          <div style="margin-bottom:8px">
+            <span class="section-kicker">TREN HISTORIS BULANAN</span>
+            <h3 id="brokerMonthlyTitle" style="margin:2px 0 0">Tren Bulanan — Seluruh Pasar</h3>
+          </div>
+          <div id="brokerMonthlyChart" style="min-height:200px"></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th>Bulan</th>
+                <th class="number">Hari Aktif</th>
+                <th class="number">Total Nilai</th>
+                <th class="number">Total Volume</th>
+                <th class="number">Total Frekuensi</th>
+              </tr>
+            </thead>
+            <tbody id="brokerMonthlyBody">
+              <tr><td colspan="5" class="loading-cell">Pilih mode dan klik tampilkan…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── 3. PER BROKER (PROFIL) ─────────────────────────────── -->
+      <div id="brokerProfile" class="broker-sub" hidden>
+        <!-- Search form -->
+        <div class="filter-bar">
+          <form id="brokerProfileForm" style="display:flex;gap:8px;align-items:center">
+            <label class="search-box"><span>◈</span>
+              <input id="brokerProfileInput" list="brokerCodeList" placeholder="Kode broker (cth: XL)" autocomplete="off" style="width:140px">
+              <datalist id="brokerCodeList"></datalist>
+            </label>
+            <button type="submit" class="btn primary" style="padding:6px 14px">Analisis</button>
+          </form>
+        </div>
+
+        <!-- Hero card -->
+        <div class="analytics-card" style="padding:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+              <span id="brokerProfileCode" style="font-size:1.5rem;font-weight:800;color:var(--accent)">—</span>
+              <span id="brokerProfileRank" class="badge-neutral" style="font-size:.7rem">—</span>
+              <span id="brokerProfileStatus" class="badge-neutral" style="font-size:.7rem">—</span>
+            </div>
+            <div id="brokerProfileName" style="font-size:.95rem;font-weight:600;color:var(--text-main);margin-bottom:2px">—</div>
+          </div>
+          <div class="mini-stats" style="flex:0;gap:20px;background:transparent;padding:0">
+            <div><span>YTD Nilai</span><b id="brokerProfileYtdNilai">—</b></div>
+            <div><span>YTD Volume</span><b id="brokerProfileYtdVol">—</b></div>
+            <div><span>YTD Frekuensi</span><b id="brokerProfileYtdFreq">—</b></div>
+            <div><span>Hari Aktif YTD</span><b id="brokerProfileYtdDays">—</b></div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="analytics-card" style="padding:16px 20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <span class="section-kicker">RIWAYAT 252 HARI TERAKHIR</span>
+              <h3 style="margin:2px 0 0">Nilai Transaksi (line) &amp; Frekuensi (bar)</h3>
+            </div>
+            <button id="brokerProfileExportBtn" class="btn secondary">↓ Export CSV</button>
+          </div>
+          <div id="brokerProfileChart" style="min-height:200px"></div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th class="number">Nilai Transaksi</th>
+                <th class="number">Volume</th>
+                <th class="number">Frekuensi</th>
+              </tr>
+            </thead>
+            <tbody id="brokerProfileBody">
+              <tr><td colspan="4" class="loading-cell">Pilih kode broker…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── 4. MASTER BROKER ────────────────────────────────────── -->
+      <div id="brokerMaster" class="broker-sub" hidden>
+        <div class="filter-bar" style="justify-content:space-between">
+          <label class="search-box"><span>⌕</span><input id="brokerMasterSearch" placeholder="Cari kode / nama broker…" autocomplete="off"></label>
+        </div>
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th class="number">#</th>
+                <th>Kode</th>
+                <th>Nama Broker</th>
+                <th>Status</th>
+                <th>Sumber</th>
+              </tr>
+            </thead>
+            <tbody id="brokerMasterBody">
+              <tr><td colspan="5" class="loading-cell">Memuat direktori broker…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span id="brokerMasterPageInfo">—</span>
+          <div>
+            <button id="brokerMasterPrev">← Sebelumnya</button>
+            <span id="brokerMasterPageNum">1 / 1</span>
+            <button id="brokerMasterNext">Berikutnya →</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ════════════════════ WATCHLIST SAYA ════════════════════ -->
+    <section id="watchlistView" class="view" hidden>
+      <div class="topbar" style="margin-bottom:4px">
+        <div>
+          <span class="section-kicker">PEMANTAUAN SAHAM PILIHAN</span>
+          <h1>📌 Watchlist Saya</h1>
+          <p class="page-subtitle">Pantau saham pilihan Anda secara real-time. Tambah, edit, dan kelola posisi dengan mudah.</p>
+        </div>
+      </div>
+      <!-- Watchlist content injected by watchlist.js -->
+      <div id="watchlistContent"></div>
+    </section>
+
+    <!-- ═════════════════ PENGATURAN TAMPILAN ═════════════════ -->
+    <section id="settingsView" class="view" hidden>
+      <div class="topbar" style="margin-bottom:8px">
+        <div>
+          <span class="section-kicker">PREFERENSI PENGGUNA</span>
+          <h1>Pengaturan Tampilan</h1>
+          <p class="page-subtitle">Sesuaikan tema, warna, tipografi, dan tata letak sesuai selera Anda. Semua perubahan tersimpan otomatis.</p>
+        </div>
+      </div>
+      <!-- Settings content injected by settings.js -->
+      <div id="settingsContent"></div>
+    </section>
+
+    <!-- ═══════════════════════ IDX WEEKLY HIGH-CONFIDENCE VIEW ═══════════════════════ -->
+    <section id="weeklyView" class="view" hidden>
+
+      <!-- Status Banner -->
+      <div id="weekly-status-banner" class="weekly-status-banner">
+        <div class="loading-spinner"><span class="spinner"></span> Memuat status model...</div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="weekly-tabs">
+        <button class="weekly-tab-btn active" data-tab="signals" onclick="switchWeeklyTab('signals')">🎯 Sinyal</button>
+        <button class="weekly-tab-btn" data-tab="model-lab" onclick="switchWeeklyTab('model-lab')">🔬 Model Lab</button>
+        <button class="weekly-tab-btn" data-tab="validation" onclick="switchWeeklyTab('validation')">📊 Walk-Forward</button>
+        <button class="weekly-tab-btn" data-tab="backtest" onclick="switchWeeklyTab('backtest')">📈 Backtest</button>
+        <button class="weekly-tab-btn" data-tab="data-quality" onclick="switchWeeklyTab('data-quality')">🔍 Kualitas Data</button>
+        <button class="weekly-tab-btn" data-tab="evaluation" onclick="switchWeeklyTab('evaluation')">🧠 Evaluasi & Pembelajaran</button>
+        <button class="weekly-tab-btn" data-tab="ihsg" onclick="switchWeeklyTab('ihsg')">📉 Prediksi IHSG</button>
+        <button class="weekly-tab-btn" data-tab="settings" onclick="switchWeeklyTab('settings')">⚙️ Training & Jobs</button>
+      </div>
+
+      <!-- Tab Panes -->
+      <div id="weekly-tab-signals" class="weekly-tab-pane active">
+        <div id="weekly-signals-content"></div>
+        <div id="weekly-signal-detail" class="weekly-signal-detail" style="display:none"></div>
+      </div>
+      <div id="weekly-tab-model-lab" class="weekly-tab-pane">
+        <div id="weekly-model-lab-content"></div>
+      </div>
+      <div id="weekly-tab-validation" class="weekly-tab-pane">
+        <div id="weekly-validation-content"></div>
+      </div>
+      <div id="weekly-tab-backtest" class="weekly-tab-pane">
+        <div id="weekly-backtest-content"></div>
+      </div>
+      <div id="weekly-tab-data-quality" class="weekly-tab-pane">
+        <div id="weekly-data-quality-content"></div>
+      </div>
+      <div id="weekly-tab-evaluation" class="weekly-tab-pane">
+        <div id="weekly-evaluation-content"></div>
+      </div>
+      <div id="weekly-tab-ihsg" class="weekly-tab-pane">
+        <div id="weekly-ihsg-content"></div>
+      </div>
+      <div id="weekly-tab-settings" class="weekly-tab-pane">
+        <div id="weekly-settings-content"></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════ ZAIDEN FUNDAMENTAL REVIEW ═══════════════════════ -->
+    <section id="idx_intelligenceView" class="view" hidden>
+      <div class="analysis-disclaimer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <p><b>Zaiden Fundamental Review</b> — Analisis Terintegrasi Data Fundamental (IDX Screener) &amp; Historis Perdagangan (Sejak 2020).</p>
+          <div style="margin-top: 8px;">
+            <span id="idxIntelligenceAsOf" style="display:inline-block; padding: 4px 8px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 4px; font-weight: 600; font-size: 0.85rem;" aria-live="polite">Memuat data…</span>
+          </div>
+        </div>
+        <button id="btnAutoSyncIdx" class="btn primary" type="button" style="background: linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; font-weight:600; padding:8px 16px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          <span>⚡</span> <span>Auto Sync Harian (IDX Update)</span>
+        </button>
+      </div>
+      
+      <!-- Data Coverage Dashboard -->
+      <article class="data-card coverage-card" style="margin-bottom: 24px; border: 1px solid var(--border-subtle); background: var(--bg-surface);">
+        <div class="data-card-head" style="padding: 16px;">
+          <div><span class="section-kicker">DATA COVERAGE</span><h3>Status Sinkronisasi &amp; Database Engine</h3></div>
+        </div>
+        <div class="metrics-grid" style="grid-template-columns:repeat(6,1fr)" id="coverageDashboard">
+          <div class="metric-card"><div class="metric-icon blue">📊</div><div class="metric-copy"><span>Total Baris Harian</span><strong id="covDailyRows">—</strong><small id="covDailyDates">— hari bursa</small></div></div>
+          <div class="metric-card"><div class="metric-icon violet">📅</div><div class="metric-copy"><span>Tersedia Sejak</span><strong id="covDailyStart">—</strong><small>s.d. <span id="covDailyEnd">—</span></small></div></div>
+          <div class="metric-card"><div class="metric-icon green">💹</div><div class="metric-copy"><span>Cakupan PER / PBV</span><strong id="covFunCoverage">—</strong><small id="covFunReason">dari saham dengan data</small></div></div>
+          <div class="metric-card"><div class="metric-icon amber">🏦</div><div class="metric-copy"><span>Saham Ada Data Fundamental</span><strong id="covFunStatus">—</strong><small>snapshot terbaru</small></div></div>
+          <div class="metric-card"><div class="metric-icon violet">📈</div><div class="metric-copy"><span>Histori Laporan Keuangan</span><strong id="covHistCoverage">—</strong><small id="covHistReason">saham dengan data historis</small></div></div>
+          <div class="metric-card"><div class="metric-icon blue">🔄</div><div class="metric-copy"><span>Update Terakhir</span><strong id="covLastUpdate">—</strong><small>Server lokal</small></div></div>
+        </div>
+      </article>
+
+      <div class="panel-head segmented" style="margin-bottom:1rem; padding: 12px; background: var(--bg-surface);">
+        <button class="active" onclick="switchIdxIntelligenceTab('fundamental')" id="btnTabFundamental">Fundamental &amp; Valuasi</button>
+        <button onclick="switchIdxIntelligenceTab('harian')" id="btnTabHarian">Ringkasan Perdagangan Harian</button>
+        <button onclick="switchIdxIntelligenceTab('quant')" id="btnTabQuant">Analisis Quant &amp; Quality Review</button>
+        <button onclick="switchIdxIntelligenceTab('growth')" id="btnTabGrowth">Growth Screener (Compounder)</button>
+      </div>
+
+      <!-- Tab Fundamental & Valuasi -->
+      <div id="tabFundamental">
+        <article class="data-card" style="margin-bottom:16px;">
+          <div class="data-card-head">
+            <div><span class="section-kicker">SEBARAN SEKTOR</span><h3>Distribusi Emiten per Sektor</h3><p>Jumlah saham dengan data fundamental, dikelompokkan per sektor GICS.</p></div>
+          </div>
+          <div class="fund-sector-chart" id="fundSectorChart"><div class="loading-cell">Memuat sebaran sektor…</div></div>
+        </article>
+        <article class="data-card screener-card">
+          <div class="data-card-head">
+            <div><span class="section-kicker">FUNDAMENTAL & VALUASI</span><h2>Snapshot Terakhir IDX</h2><p>Data valuasi dan fundamental berdasarkan API IDX Screener. Klik header kolom untuk mengurutkan.</p></div>
+          </div>
+          <div class="filter-bar analytics-filter">
+             <label class="search-box"><span>⌕</span><input id="fundamentalSearch" placeholder="Cari kode saham…"></label>
+             <button class="btn secondary" type="button" onclick="window.exportTableCSV('fundamental')">⬇ Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="analytics-table">
+              <thead><tr>
+                <th class="sortable-th" data-sort-table="fundamental" data-sort-col="stock_code" onclick="window.setSort('fundamental','stock_code')">Kode</th>
+                <th>Perusahaan</th>
+                <th class="sortable-th" data-sort-table="fundamental" data-sort-col="sektor" onclick="window.setSort('fundamental','sektor')">Sektor</th>
+                <th class="number sortable-th" data-sort-table="fundamental" data-sort-col="per" onclick="window.setSort('fundamental','per')">PER</th>
+                <th class="number sortable-th" data-sort-table="fundamental" data-sort-col="pbv" onclick="window.setSort('fundamental','pbv')">PBV</th>
+                <th class="number sortable-th" data-sort-table="fundamental" data-sort-col="roe" onclick="window.setSort('fundamental','roe')">ROE</th>
+                <th class="number sortable-th" data-sort-table="fundamental" data-sort-col="der" onclick="window.setSort('fundamental','der')">DER</th>
+                <th class="number sortable-th" data-sort-table="fundamental" data-sort-col="market_cap" onclick="window.setSort('fundamental','market_cap')">Market Cap</th>
+              </tr></thead>
+              <tbody id="fundamentalBody"><tr><td colspan="8" class="loading-cell">Menunggu sinkronisasi data…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="fundamentalPagination"></div>
+        </article>
+      </div>
+
+      <!-- Tab Ringkasan Perdagangan Harian -->
+      <div id="tabHarian" hidden>
+        <article class="data-card screener-card">
+          <div class="data-card-head">
+            <div><span class="section-kicker">HISTORICAL TRADING</span><h2>Riwayat Harga, Volume &amp; Valuasi Historis</h2><p>Menggabungkan data perdagangan harian dengan data fundamental (Point-in-Time Join).</p></div>
+          </div>
+          <div class="filter-bar analytics-filter">
+            <label class="search-box"><span>⌕</span><input id="harianSearch" placeholder="Cari kode saham…"></label>
+            <input type="date" id="harianDateStart" class="compact-select" title="Tanggal Mulai">
+            <input type="date" id="harianDateEnd" class="compact-select" title="Tanggal Akhir">
+            <select id="harianLimit" class="compact-select"><option value="50">50 Baris</option><option value="100">100 Baris</option><option value="500">500 Baris</option></select>
+            <button id="btnHarianLoad" class="btn primary" style="padding: 0 16px;">Tampilkan</button>
+          </div>
+          <div class="table-wrap">
+            <table class="analytics-table">
+              <thead><tr><th>Tanggal</th><th>Kode</th><th class="number">Close</th><th class="number">Volume</th><th class="number">Value</th><th class="number">Freq</th><th class="number">Current Market Cap</th><th class="number">Est. PER</th><th class="number">Est. PBV</th></tr></thead>
+              <tbody id="harianBody"><tr><td colspan="9" class="loading-cell">Menunggu pencarian…</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+
+      <!-- Tab Analisis Quant & Quality Matrix -->
+      <div id="tabQuant" hidden>
+        <article class="data-card screener-card">
+          <div class="data-card-head">
+            <div><span class="section-kicker">QUANTITATIVE REVIEW</span><h2>Analisis Matriks Kualitas &amp; Valuasi Quant</h2><p>Klasifikasi otomatis berbasis gabungan indikator Fundamental (Screener) &amp; Historis Transaksi (2020-sekarang).</p></div>
+          </div>
+          
+          <div class="metrics-grid four" style="padding: 16px;">
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+              <div class="metric-copy"><span>💎 Super Value (High ROE &amp; Low PBV)</span><strong id="quantSuperValueCount">—</strong><small>ROE &gt;12%, PBV &lt;1.5, DER &lt;1.5</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #3b82f6;">
+              <div class="metric-copy"><span>🚀 High Quality Growth</span><strong id="quantGrowthCount">—</strong><small>ROE &gt;15%, ROA &gt;8%</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #f59e0b;">
+              <div class="metric-copy"><span>⚠️ Potential Value Trap</span><strong id="quantValueTrapCount">—</strong><small>PBV &lt;0.8 tetapi ROE negatif / DER &gt;2.5</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #ef4444;">
+              <div class="metric-copy"><span>💸 Overvalued Warning</span><strong id="quantOvervaluedCount">—</strong><small>PBV &gt;4.0 &amp; ROE &lt;5%</small></div>
+            </div>
+          </div>
+
+          <div class="filter-bar analytics-filter" style="padding: 0 16px 16px;">
+            <label class="search-box"><span>⌕</span><input id="quantSearch" placeholder="Cari kode saham / filter kategori…"></label>
+            <select id="quantCategoryFilter" class="compact-select">
+              <option value="all">Semua Kategori Quant</option>
+              <option value="super_value">💎 Super Value</option>
+              <option value="quality_growth">🚀 High Quality Growth</option>
+              <option value="value_trap">⚠️ Potential Value Trap</option>
+              <option value="overvalued">💸 Overvalued Warning</option>
+            </select>
+            <button class="btn secondary" type="button" onclick="window.exportTableCSV('quant')">⬇ Export CSV</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="analytics-table">
+              <thead><tr>
+                <th class="sortable-th" data-sort-table="quant" data-sort-col="stock_code" onclick="window.setSort('quant','stock_code')">Kode</th>
+                <th>Perusahaan</th>
+                <th>Klasifikasi Quant</th>
+                <th class="number sortable-th" data-sort-table="quant" data-sort-col="per" onclick="window.setSort('quant','per')">PER</th>
+                <th class="number sortable-th" data-sort-table="quant" data-sort-col="pbv" onclick="window.setSort('quant','pbv')">PBV</th>
+                <th class="number sortable-th" data-sort-table="quant" data-sort-col="roe" onclick="window.setSort('quant','roe')">ROE (%)</th>
+                <th class="number sortable-th" data-sort-table="quant" data-sort-col="der" onclick="window.setSort('quant','der')">DER</th>
+                <th class="number sortable-th" data-sort-table="quant" data-sort-col="range_pos_pct" onclick="window.setSort('quant','range_pos_pct')">Posisi 52W Range</th>
+              </tr></thead>
+              <tbody id="quantBody"><tr><td colspan="8" class="loading-cell">Memuat Analisis Quant…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="quantPagination"></div>
+        </article>
+      </div>
+
+      <!-- Tab Growth Screener (Compounder) -->
+      <div id="tabGrowth" hidden>
+        <article class="data-card screener-card">
+          <div class="data-card-head" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+            <div><span class="section-kicker">GROWTH CONSISTENCY</span><h2>Compounder Screener</h2><p>Emiten dengan laba/pendapatan yang naik konsisten dari tahun ke tahun &amp; kuartal ke kuartal.</p></div>
+            <button id="btnSyncGrowth" class="btn secondary" type="button" style="padding:8px 16px;">🔄 Sinkronkan Data Historis</button>
+          </div>
+          <div class="analysis-disclaimer" style="margin:0 16px 12px;">
+            <small id="growthCoverageNote">Kedalaman data mengikuti ketersediaan sumber (yfinance) per emiten — umumnya ~4 tahun buku / ~5 kuartal terakhir, bukan penuh sejak 2020.</small>
+            <small id="growthSyncStatus" style="display:block; margin-top:4px; color:var(--text-muted);"></small>
+          </div>
+
+          <div class="metrics-grid four" style="padding: 0 16px 16px;">
+            <div class="metric-card" style="border-left: 4px solid #10b981;">
+              <div class="metric-copy"><span>🏆 Consistent Compounder</span><strong id="growthCompounderCount">—</strong><small>Laba naik di SETIAP periode tahunan tersedia</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #3b82f6;">
+              <div class="metric-copy"><span>📈 Growing</span><strong id="growthGrowingCount">—</strong><small>Laba naik di tahun terakhir</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #ef4444;">
+              <div class="metric-copy"><span>📉 Declining</span><strong id="growthDecliningCount">—</strong><small>Laba turun di tahun terakhir</small></div>
+            </div>
+            <div class="metric-card" style="border-left: 4px solid #f59e0b;">
+              <div class="metric-copy"><span>🔀 Volatile</span><strong id="growthVolatileCount">—</strong><small>Data tidak cukup / naik-turun</small></div>
+            </div>
+          </div>
+
+          <div class="filter-bar analytics-filter">
+            <label class="search-box"><span>⌕</span><input id="growthSearch" placeholder="Cari kode saham / perusahaan…"></label>
+            <select id="growthCategoryFilter" class="compact-select">
+              <option value="all">Semua Kategori</option>
+              <option value="consistent_compounder">🏆 Consistent Compounder</option>
+              <option value="growing">📈 Growing</option>
+              <option value="declining">📉 Declining</option>
+              <option value="volatile">🔀 Volatile</option>
+            </select>
+            <button class="btn secondary" type="button" onclick="window.exportTableCSV('growth')">⬇ Export CSV</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="analytics-table">
+              <thead><tr>
+                <th class="sortable-th" data-sort-table="growth" data-sort-col="stock_code" onclick="window.setSort('growth','stock_code')">Kode</th>
+                <th>Perusahaan</th>
+                <th class="sortable-th" data-sort-table="growth" data-sort-col="sektor" onclick="window.setSort('growth','sektor')">Sektor</th>
+                <th>Kategori</th>
+                <th class="number sortable-th" data-sort-table="growth" data-sort-col="net_income_growth_streak_years" onclick="window.setSort('growth','net_income_growth_streak_years')">Streak Laba Tahunan</th>
+                <th class="number sortable-th" data-sort-table="growth" data-sort-col="quarterly_net_income_growth_streak" onclick="window.setSort('growth','quarterly_net_income_growth_streak')">Streak Laba Kuartalan</th>
+                <th class="number sortable-th" data-sort-table="growth" data-sort-col="net_income_cagr_pct" onclick="window.setSort('growth','net_income_cagr_pct')">CAGR Laba (%)</th>
+                <th class="number sortable-th" data-sort-table="growth" data-sort-col="revenue_cagr_pct" onclick="window.setSort('growth','revenue_cagr_pct')">CAGR Pendapatan (%)</th>
+                <th class="number sortable-th" data-sort-table="growth" data-sort-col="market_cap" onclick="window.setSort('growth','market_cap')">Market Cap</th>
+                <th>Riwayat Valuasi</th>
+              </tr></thead>
+              <tbody id="growthBody"><tr><td colspan="9" class="loading-cell">Memuat Growth Screener…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="growthPagination"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Modal: per-period PER/PBV history for a single stock -->
+    <dialog class="modal" id="valuationHistoryModal">
+      <div class="modal-head">
+        <div>
+          <h2 id="valHistTitle">Riwayat Valuasi</h2>
+          <p id="valHistSubtitle">PER/PBV per periode pelaporan (kuartalan, semester, 9 bulan, tahunan)</p>
+        </div>
+        <button class="modal-close" type="button" onclick="document.getElementById('valuationHistoryModal').close()">✕</button>
+      </div>
+      <div style="padding:0 23px 23px;">
+        <div id="valHistContent" class="table-wrap"><div class="loading-cell">Memuat…</div></div>
+      </div>
+    </dialog>
+
+    <section id="chatView" class="view" hidden>
+
+
+      <!-- Header -->
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <div class="chat-header-icon">✨</div>
+          <div>
+            <h2 class="chat-header-title">Zaiden AI</h2>
+            <p class="chat-header-sub">Powered by Google Gemini · Analisis Pasar Saham Indonesia</p>
+          </div>
+        </div>
+        <div class="chat-header-right">
+          <span id="chatStatusBadge" class="chat-status-badge disconnected"><span class="chat-status-dot"></span> Belum Dikonfigurasi</span>
+          <button id="chatClearBtn" class="btn secondary" title="Hapus percakapan" style="padding:7px 11px">🗑 Hapus</button>
+        </div>
+      </div>
+
+      <!-- API Key Setup Card -->
+      <div id="chatSetupCard" class="chat-setup-card">
+        <div class="chat-setup-icon">🔑</div>
+        <div class="chat-setup-body">
+          <h3>Hubungkan Gemini AI</h3>
+          <p>Dapatkan API key <b>gratis</b> di <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> → Get API Key. Tidak perlu kartu kredit.</p>
+          <form id="chatSetupForm" class="chat-setup-form">
+            <div class="chat-key-input-wrap">
+              <input id="chatApiKeyInput" type="password" placeholder="Paste API key Anda di sini (AIza…)" autocomplete="off" spellcheck="false">
+              <button type="button" id="chatApiKeyToggle" class="chat-key-toggle" title="Tampilkan/sembunyikan">👁</button>
+            </div>
+            <button id="chatSetupSubmitBtn" type="submit" class="btn primary">Sambungkan</button>
+          </form>
+          <p class="chat-setup-note">⚠ API key hanya tersimpan di memori (tidak ke disk) dan hilang saat server restart.</p>
+        </div>
+      </div>
+
+      <!-- Messages area -->
+      <div id="chatMessages" class="chat-messages"></div>
+
+      <!-- Input bar -->
+      <div id="chatInputBar" class="chat-input-bar">
+        <form id="chatForm" class="chat-form">
+          <textarea id="chatInput" class="chat-input" rows="1"
+            placeholder="Tanyakan apa saja… (misal: top gainer hari ini?, broker terbesar minggu ini?)"
+            autocomplete="off" spellcheck="false"></textarea>
+          <button id="chatSendBtn" type="submit" class="chat-send-btn" disabled title="Kirim (Enter)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </form>
+        <div class="chat-input-hint">Tekan Enter untuk kirim · Shift+Enter untuk baris baru · AI mengakses database lokal Anda secara real-time</div>
+      </div>
+
+    </section>
+
+    <section id="ownershipView" class="view" hidden>
+      <article class="data-card">
+        <div class="data-card-head"><div><span class="section-kicker">DATABASE KEPEMILIKAN</span><h2>Daftar Pemegang Saham Posisi &gt;1%</h2><p>Kelola seluruh data bulanan kepemilikan investor.</p></div><div class="head-buttons"><button id="ownerPrintBtn" class="btn secondary">▣ Cetak / PDF</button><button id="ownerExportBtn" class="btn secondary">↓ Export Excel (CSV)</button><button id="ownerAddBtn" class="btn primary">＋ Tambah kepemilikan</button></div></div>
+        <div class="mini-stats"><div><span>Total investor</span><b id="ownerStatInvestors">—</b></div><div><span>Total emiten</span><b id="ownerStatIssuers">—</b></div><div><span>Total saham</span><b id="ownerStatShares">—</b></div><div><span>Porsi asing</span><b id="ownerStatForeign">—</b></div></div>
+        <div class="filter-bar">
+          <label class="search-box"><span>⌕</span><input id="ownerCodeFilter" list="ownerCodeList" placeholder="Cari kode saham…"></label>
+          <label class="search-box"><span>⌕</span><input id="ownerInvestorFilter" list="ownerInvestorList" placeholder="Cari nama investor…"></label>
+          <datalist id="ownerCodeList"></datalist><datalist id="ownerInvestorList"></datalist>
+          <select id="ownerMonth"><option value="">Semua bulan</option></select>
+          <select id="ownerOrigin"><option value="">Semua asal</option><option value="L">Lokal</option><option value="F">Asing</option><option value="N">Non warkat</option></select>
+          <select id="ownerPageSize"><option value="10">10 baris</option><option value="20" selected>20 baris</option><option value="50">50 baris</option><option value="100">100 baris</option></select>
+        </div>
+        <div class="table-wrap"><table class="wide-table"><thead><tr><th>Tanggal</th><th>Kode saham</th><th>Emiten</th><th>Investor</th><th>Klasifikasi</th><th>Asal</th><th>Nasionalitas</th><th>Domisili</th><th class="number">Scripless</th><th class="number">Scrip</th><th class="number">Total saham</th><th class="number">Porsi</th><th></th></tr></thead><tbody id="ownerBody"></tbody></table><div id="ownerEmpty" class="empty-state" hidden><span>⌕</span><b>Data tidak ditemukan</b><small>Coba ubah kata kunci atau filter.</small></div></div>
+        <div class="pagination"><span id="ownerPageInfo">—</span><div><button id="ownerPrev">← Sebelumnya</button><span id="ownerPageNumber">1</span><button id="ownerNext">Berikutnya →</button></div></div>
+      </article>
+    </section>
+
+    <section id="stocksView" class="view" hidden>
+      <div class="master-hero"><div><span class="section-kicker">MASTER DATA BURSA EFEK INDONESIA</span><h2>Daftar Saham Tercatat IDX</h2><p>Referensi emiten, tanggal pencatatan, jumlah saham, dan papan pencatatan.</p></div><button id="stockAddBtn" class="btn light">＋ Tambah saham</button></div>
+      <div class="master-stats"><article><span>Total emiten</span><strong id="stockStatCount">—</strong><small>Saham dalam master</small></article><article><span>Total saham beredar</span><strong id="stockStatShares">—</strong><small>Akumulasi seluruh emiten</small></article><article><span>Papan utama</span><strong id="stockStatMain">—</strong><small>Main board</small></article><article><span>Papan pengembangan</span><strong id="stockStatDevelopment">—</strong><small>Development board</small></article></div>
+      <article class="data-card">
+        <div class="data-card-head"><div><span class="section-kicker">MASTER SAHAM</span><h2>Data referensi emiten</h2></div><button id="stockExportBtn" class="btn secondary">↓ Export CSV</button></div>
+        <div class="filter-bar master-filter"><label class="search-box"><span>⌕</span><input id="stockSearch" placeholder="Cari kode atau nama perusahaan…"></label><select id="stockBoard"><option value="">Semua papan</option></select><select id="stockPageSize"><option value="10">10 baris</option><option value="20" selected>20 baris</option><option value="50">50 baris</option><option value="100">100 baris</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>No.</th><th>Kode</th><th>Nama perusahaan</th><th>Tanggal listing</th><th class="number">Saham beredar</th><th>Papan pencatatan</th><th></th></tr></thead><tbody id="stockBody"></tbody></table><div id="stockEmpty" class="empty-state" hidden><span>◇</span><b>Master saham kosong</b><small>Tambah saham baru atau ubah filter.</small></div></div>
+        <div class="pagination"><span id="stockPageInfo">—</span><div><button id="stockPrev">← Sebelumnya</button><span id="stockPageNumber">1</span><button id="stockNext">Berikutnya →</button></div></div>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="ownerDialog" class="modal"><form id="ownerForm"><div class="modal-head"><div><span class="section-kicker">DATABASE KEPEMILIKAN</span><h2 id="ownerFormTitle">Tambah kepemilikan</h2><p>Kolom bertanda * wajib diisi.</p></div><button type="button" class="modal-close" data-close="ownerDialog">×</button></div><input type="hidden" id="ownerId"><div class="form-grid">
+    <label>Tanggal posisi *<input id="fieldDate" type="date" required></label><label>Kode saham *<input id="fieldCode" maxlength="12" placeholder="Contoh: BBCA" required></label><label class="span-2">Nama emiten *<input id="fieldIssuer" required></label><label class="span-2">Nama investor *<input id="fieldInvestor" required></label><label>Klasifikasi<input id="fieldClass" list="classOptions" placeholder="Corporate"></label><label>Asal investor *<select id="fieldOrigin" required><option value="L">Lokal</option><option value="F">Asing</option><option value="N">Masyarakat non warkat</option></select></label><label>Nasionalitas<input id="fieldNationality"></label><label>Domisili<input id="fieldDomicile"></label><label>Saham scripless *<input id="fieldScripless" type="number" min="0" step="1" required></label><label>Saham scrip *<input id="fieldScrip" type="number" min="0" step="1" value="0" required></label><label>Persentase kepemilikan (%) *<input id="fieldPercentage" type="number" min="0" max="100" step="0.0001" required></label>
+  </div><datalist id="classOptions"><option value="Corporate"><option value="Individual"><option value="Financial Institutional"><option value="Foundation"><option value="Pension Fund"><option value="Insurance"></datalist><div class="modal-actions"><button id="ownerDeleteBtn" type="button" class="btn danger" hidden>Hapus data</button><span></span><button type="button" class="btn secondary" data-close="ownerDialog">Batal</button><button type="submit" class="btn primary">Simpan data</button></div></form></dialog>
+
+  <dialog id="stockDialog" class="modal small-modal"><form id="stockForm"><div class="modal-head"><div><span class="section-kicker">MASTER SAHAM IDX</span><h2 id="stockFormTitle">Tambah saham</h2><p>Perbarui referensi emiten yang digunakan dashboard.</p></div><button type="button" class="modal-close" data-close="stockDialog">×</button></div><input type="hidden" id="stockId"><div class="form-grid">
+    <label>Kode saham *<input id="stockFieldCode" maxlength="12" placeholder="Contoh: BBCA" required></label><label>Papan pencatatan *<select id="stockFieldBoard" required><option value="Main">Main</option><option value="Development">Development</option><option value="New Economy">New Economy</option><option value="Watchlist">Watchlist</option><option value="Acceleration">Acceleration</option></select></label><label class="span-2">Nama perusahaan *<input id="stockFieldCompany" required></label><label>Tanggal listing<input id="stockFieldDate" type="date"></label><label>Saham beredar *<input id="stockFieldShares" type="number" min="0" step="1" required></label>
+  </div><div class="modal-actions"><button id="stockDeleteBtn" type="button" class="btn danger" hidden>Hapus data</button><span></span><button type="button" class="btn secondary" data-close="stockDialog">Batal</button><button type="submit" class="btn primary">Simpan data</button></div></form></dialog>
+
+  <div id="toast" class="toast"><span id="toastIcon">✓</span><div><b id="toastTitle">Berhasil</b><small id="toastMessage"></small></div></div>
+  <script src="./assets/vendor/chart.umd.min.js"></script>
+  <script src="./assets/app.js?v=20260712-06"></script>
+  <script src="./assets/analytics.js?v=20260712-08"></script>
+  <script src="./assets/drp.js?v=20260712-01"></script>
+  <script src="./assets/accumulation.js?v=20260712-02"></script>
+  <script src="./assets/broker.js?v=20260712-03"></script>
+  <script src="./assets/signals.js?v=20260712-01"></script>
+  <script src="./assets/settings.js?v=20260712-01"></script>
+  <script src="./assets/watchlist.js?v=20260718-02"></script>
+  <script src="./assets/weekly_signals.js?v=20260728-01"></script>
+
+  <script src="./assets/chat.js?v=20260712-01"></script>
+</body>
+
+</html>

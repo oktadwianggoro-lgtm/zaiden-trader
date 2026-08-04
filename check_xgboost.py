@@ -1,0 +1,1 @@
+import sqlite3; conn=sqlite3.connect('data/zaiden_trader.db'); print(conn.execute('SELECT id, model_name, status, completed_at FROM ml_weekly_model_runs WHERE model_name=''xgboost'' ORDER BY id DESC LIMIT 5').fetchall())

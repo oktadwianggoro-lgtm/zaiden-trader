@@ -1,0 +1,1 @@
+import sqlite3; conn=sqlite3.connect('data/zaiden_trader.db'); print(conn.execute('SELECT COUNT(1), prediction_date, model_run_id FROM ml_weekly_predictions GROUP BY prediction_date, model_run_id ORDER BY prediction_date DESC').fetchall())

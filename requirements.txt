@@ -1,0 +1,47 @@
+# requirements.txt — Runtime dependencies for Zaidan Traider
+#
+# IMPORTANT: stdlib modules (sqlite3, http.server, etc.) are NOT listed here.
+# Install with: pip install -r requirements.txt
+#
+# BUKA-APLIKASI.bat prefers .venv\Scripts\python.exe when it exists, and
+# falls back to a bare `python` otherwise. If you install a new package,
+# install it into WHICHEVER interpreter .venv points to (or recreate
+# .venv from this file) — installing only into a different global Python
+# will look like it works when tested manually but silently fail for every
+# button click the app itself makes, since those run through .venv.
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# HTTP client (used by idx_broker_pipeline.py, tools/idx_sync_engine.py)
+requests>=2.31.0
+
+# HTTP adapter retry (used by idx_broker_pipeline.py)
+urllib3>=2.0.0
+
+# PDF report generation (used by ml_weekly/pdf_report.py), including charts —
+# rendered with reportlab.graphics (pure vector shapes, no native rendering
+# step) rather than matplotlib/mplfinance. Deliberate: matplotlib's compiled
+# backend gets blocked outright by Windows Smart App Control on locked-down
+# machines ("did not meet the Enterprise signing level requirements"), which
+# silently killed every chart in this report. Do not reintroduce
+# matplotlib/mplfinance for PDF charts without checking that constraint.
+reportlab>=4.0.0
+
+# Image handling (transitive reportlab dependency for raster image support)
+pillow>=10.0.0
+
+# Yahoo Finance fundamental data (used by tools/sync_idx_fundamental_*.py)
+yfinance>=1.4.0
+
+# ── ML Weekly HC stack (used by ml_weekly/*.py) ────────────────────────────
+pandas>=2.2.0
+numpy>=1.26.0
+scikit-learn>=1.5.0
+xgboost>=2.0.0
+joblib>=1.3.0
+python-dateutil>=2.8.0
+
+# Optional ensemble member (ml_weekly/train.py falls back gracefully if absent)
+lightgbm>=4.0.0
+
+# Test suite (tests/*.py)
+pytest>=8.0.0

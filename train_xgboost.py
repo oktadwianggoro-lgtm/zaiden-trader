@@ -1,0 +1,1 @@
+import os, sys, json; sys.path.append(os.getcwd()); from ml_weekly.api_handlers import start_training_job; from pathlib import Path; print(start_training_job('data/zaiden_trader.db', Path('models'), {'model_name': 'xgboost'}))

@@ -193,7 +193,12 @@ def fetch_day(session: IdxSession, day: date, retries: int) -> FetchResult:
         except (URLError, TimeoutError, ValueError, json.JSONDecodeError) as error:
             last_error = str(error)
         if attempt < retries:
-            wait = min(2 ** (attempt - 1), 30) + random.uniform(0.1, 0.6)
+            # IDX (Cloudflare-fronted) intermittently blocks/rate-limits automated
+            # requests for several minutes at a stretch, not just seconds — a low
+            # cap here made single on-demand syncs give up well before a typical
+            # block lifts. 45s cap x up to 7 retries gives ~2min of patience per
+            # date, still bounded well under the caller's subprocess timeout.
+            wait = min(2 ** (attempt - 1), 45) + random.uniform(0.1, 0.6)
             time.sleep(wait)
     return FetchResult(day, "failed", [], 0, None, retries, last_status, last_error)
 

@@ -581,6 +581,25 @@
   margin-bottom: 6px;
 }
 
+/* Self-contained box for paginated widgets (top-signals batches, pending
+   progress) — `contain: layout` stops a page-size change inside the box
+   from forcing the browser to recompute layout for the whole long
+   Evaluasi & Pembelajaran page around it, and keeping old content visible
+   (dimmed via [aria-busy]) instead of collapsing to a spinner avoids the
+   height-shrink-then-grow jump that made pagination there feel janky. */
+.dq-boxed-panel {
+  background: var(--surface, #1a1f2e);
+  border: 1px solid var(--border, #2a3050);
+  border-radius: 10px;
+  padding: 14px 16px;
+  contain: layout;
+}
+.dq-boxed-panel[aria-busy="true"] {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
 /* ── Settings Panel ─────────────────────────────────────────────────────────── */
 .settings-header { margin-bottom: 16px; }
 .sh-title { font-size: 16px; font-weight: 700; color: var(--text, #e2e8f0); }

@@ -453,6 +453,26 @@ async function _fetchPdfAndDownload(url, filename, btn, busyText) {
       throw new Error(msg);
     }
     const blob = await res.blob();
+
+    // Guard against a truncated transfer (e.g. server restarted mid-download)
+    // slipping through as a "successful" fetch — a cut-off response can still
+    // resolve here with res.ok=true but a body that's shorter than promised
+    // or missing its PDF trailer, which browsers then report as "file
+    // damaged" with no indication of why. Verify the size matches what the
+    // server declared, and that it actually starts with the PDF magic bytes,
+    // BEFORE handing the user a file that looks downloaded but won't open.
+    const declaredLength = Number(res.headers.get('Content-Length'));
+    if (declaredLength && blob.size !== declaredLength) {
+      throw new Error(
+        `Unduhan terputus (${blob.size} dari ${declaredLength} byte diterima) — kemungkinan koneksi ke server sempat terputus. Coba unduh ulang.`
+      );
+    }
+    const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+    const headText = String.fromCharCode(...head);
+    if (headText !== '%PDF-') {
+      throw new Error('File yang diterima bukan PDF valid (kemungkinan respons error tersembunyi). Coba unduh ulang.');
+    }
+
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
@@ -1099,6 +1119,9 @@ async function loadWeeklyEvaluation() {
     const data = await res.json();
     WeeklyState.evaluation = data;
     renderWeeklyEvaluation(el, data);
+    // Pending-progress can have data even with zero matured signals yet
+    // (a brand-new batch pulled today), so load it unconditionally.
+    loadPendingSignalProgress();
     if (data.overall && data.overall.n > 0) {
       WeeklyState.evalSignalOffset = 0;
       WeeklyState.evalSignalTicker = '';
@@ -1199,21 +1222,39 @@ function renderEvaluationSignalHistory(el) {
   `;
 }
 
-const TOP_SIGNALS_BATCH_PAGE_SIZE = 3;
+const TOP_SIGNALS_BATCH_PAGE_SIZE = 1;
+
+// Pagination inside a .dq-boxed-panel should feel like updating a widget,
+// not reloading a page: keep whatever's already shown on screen (dimmed via
+// [aria-busy]) instead of wiping it to a spinner first, which was causing
+// the panel to collapse then re-expand on every page change. Only fall back
+// to a spinner when the panel is genuinely empty (first load).
+async function _loadIntoBoxedPanel(el, fetchAndRender) {
+  if (!el) return;
+  const panel = el.closest('.dq-boxed-panel');
+  if (panel) {
+    panel.setAttribute('aria-busy', 'true');
+  }
+  if (!el.innerHTML.trim()) {
+    el.innerHTML = '<div class="loading-spinner"><span class="spinner"></span> Memuat...</div>';
+  }
+  try {
+    await fetchAndRender();
+  } catch (e) {
+    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
+  } finally {
+    if (panel) panel.removeAttribute('aria-busy');
+  }
+}
 
 async function loadTopConfidenceSignals(batchOffset = 0) {
   const el = document.getElementById('weekly-evaluation-top10-content');
-  if (!el) return;
-  el.innerHTML = '<div class="loading-spinner"><span class="spinner"></span> Memuat...</div>';
-
-  try {
+  await _loadIntoBoxedPanel(el, async () => {
     const res = await fetch(`/api/weekly/evaluation/top-signals?top_n=10&batch_limit=${TOP_SIGNALS_BATCH_PAGE_SIZE}&batch_offset=${batchOffset}`);
     const data = await res.json();
     WeeklyState.topSignalsBatchOffset = batchOffset;
     renderTopConfidenceSignals(el, data);
-  } catch (e) {
-    el.innerHTML = `<div class="error-msg">Error: ${e.message}</div>`;
-  }
+  });
 }
 
 function renderTopConfidenceSignals(el, data) {
@@ -1223,7 +1264,7 @@ function renderTopConfidenceSignals(el, data) {
   const offset = data.batch_offset || 0;
 
   if (batches.length === 0) {
-    el.innerHTML = '<div class="text-muted small">Belum ada sinyal matang untuk dirangking.</div>';
+    el.innerHTML = '<div class="text-muted small">Belum ada tarikan sinyal untuk dirangking.</div>';
     return;
   }
 
@@ -1243,35 +1284,50 @@ function renderTopConfidenceSignals(el, data) {
     const rows = b.signals.map((s, i) => {
       const pct = s.pct_change;
       const pctColor = pct === null || pct === undefined ? '#94a3b8' : (pct >= 0 ? '#34d399' : '#f87171');
-      const pctText = pct === null || pct === undefined ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
-      const outcomeColor = s.outcome_status === 'HIT' ? '#34d399' : '#f87171';
+      const pctPrefix = s.is_pending ? '(sementara) ' : '';
+      const pctText = pct === null || pct === undefined ? '—' : `${pctPrefix}${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
       const probText = s.signal_probability !== null && s.signal_probability !== undefined ? `${s.signal_probability.toFixed(1)}%` : '—';
+      const priceLabel = s.exit_price !== null ? s.exit_price.toLocaleString('id-ID') : '—';
+      let outcomeColor, outcomeText;
+      if (s.is_pending) {
+        outcomeColor = '#fbbf24';
+        outcomeText = s.days_elapsed === null ? '🔄 Berjalan' : `🔄 Berjalan (${s.days_elapsed}/${s.horizon_days} hari)`;
+      } else {
+        outcomeColor = s.outcome_status === 'HIT' ? '#34d399' : '#f87171';
+        outcomeText = s.outcome_status;
+      }
       return `
-        <tr>
+        <tr${s.is_pending ? ' style="opacity:0.9"' : ''}>
           <td class="text-muted">#${i + 1}</td>
           <td><strong>${s.ticker}</strong></td>
           <td style="font-weight:600">${probText}</td>
           <td>${s.horizon_days} hari</td>
           <td>${s.entry_price !== null ? s.entry_price.toLocaleString('id-ID') : '—'}</td>
-          <td>${s.exit_price !== null ? s.exit_price.toLocaleString('id-ID') : '—'}</td>
+          <td>${priceLabel}</td>
           <td style="color:${pctColor}; font-weight:600">${pctText}</td>
-          <td style="color:${outcomeColor}; font-weight:600">${s.outcome_status}</td>
+          <td style="color:${outcomeColor}; font-weight:600">${outcomeText}</td>
           <td class="text-muted small">${EVAL_TIER_META[s.confidence_tier]?.label || s.confidence_tier || '—'}</td>
         </tr>
       `;
     }).join('');
 
+    const statusLine = b.n_pending > 0
+      ? (b.n_matured > 0
+          ? `<span style="color:${hitColor}; font-weight:600">${b.hits}/${b.n_matured} HIT</span> · <span style="color:#fbbf24; font-weight:600">🔄 ${b.n_pending} masih berjalan</span>`
+          : `<span style="color:#fbbf24; font-weight:600">🔄 ${b.n_pending} masih berjalan — belum ada yang matang</span>`)
+      : `<span style="color:${hitColor}; font-weight:600">${b.hits}/${b.n} HIT (${evalPct(b.hit_rate)})</span>`;
+
     return `
       <div class="dq-section" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color, #2a3050)">
         <div class="dq-table-info" style="margin-bottom:6px">
-          <span><strong>Tarikan ${b.prediction_date}</strong></span>
-          <span style="color:${hitColor}; font-weight:600">${b.hits}/${b.n} HIT (${evalPct(b.hit_rate)})</span>
+          <span><strong>Tarikan ${b.prediction_date}</strong>${pendingProgressPullTimeLabel(b.pulled_at)}</span>
+          <span>${statusLine}</span>
         </div>
         <table class="mini-table">
           <thead>
             <tr>
               <th>#</th><th>Saham</th><th>Probabilitas</th><th>Horizon</th>
-              <th>Harga Awal</th><th>Harga Akhir</th><th>Perubahan</th><th>Hasil</th><th>Tier</th>
+              <th>Harga Awal</th><th>Harga Terkini/Akhir</th><th>Perubahan</th><th>Hasil</th><th>Tier</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
@@ -1281,9 +1337,11 @@ function renderTopConfidenceSignals(el, data) {
   }).join('');
 
   const shownEnd = offset + batches.length;
+  const currentPage = Math.floor(offset / TOP_SIGNALS_BATCH_PAGE_SIZE) + 1;
+  const totalPages = Math.max(1, Math.ceil(totalBatches / TOP_SIGNALS_BATCH_PAGE_SIZE));
   const pagination = `
     <div class="dq-table-info" style="margin-top:10px">
-      <span>Tarikan ${offset + 1}–${shownEnd} dari ${totalBatches} (terbaru dulu)</span>
+      <span>Halaman ${currentPage} dari ${totalPages} — Tarikan ${offset + 1}–${shownEnd} dari ${totalBatches} (terbaru dulu)</span>
       <span>
         <button class="btn-secondary" style="padding:4px 10px;font-size:12px" ${offset <= 0 ? 'disabled' : ''}
           onclick="loadTopConfidenceSignals(${Math.max(0, offset - TOP_SIGNALS_BATCH_PAGE_SIZE)})">← Tarikan Lebih Baru</button>
@@ -1295,12 +1353,106 @@ function renderTopConfidenceSignals(el, data) {
 
   el.innerHTML = `
     <div class="text-muted small mb-1">
-      Tiap tarikan (hari prediksi dibuat) diambil 10 sinyal dengan probabilitas TERTINGGI-nya sendiri saat itu —
-      bukan dicampur jadi satu daftar global. Ini pengujian paling ketat per-tarikan: kalau model benar-benar
-      yakin di hari itu, sinyal-sinyal inilah yang seharusnya paling sering benar.
+      Tiap tarikan (satu kali pull prediksi, bisa lebih dari sekali per hari) diambil 10 sinyal dengan probabilitas
+      TERTINGGI-nya sendiri saat itu — bukan dicampur jadi satu daftar global. Ini pengujian paling ketat per-tarikan:
+      kalau model benar-benar yakin di hari itu, sinyal-sinyal inilah yang seharusnya paling sering benar.
+      Tarikan yang belum genap 5 hari bursa tetap ditampilkan dengan progres SEMENTARA (🔄 Berjalan) —
+      baru dihitung ke statistik hit rate setelah benar-benar matang.
     </div>
     ${aggSummary}
     ${batchBlocks}
+    ${pagination}
+  `;
+}
+
+// ── Progres sinyal yang belum matang (in-flight, outcome_status='PENDING') ──
+const PENDING_PROGRESS_STATE_META = {
+  MENUJU_TP: { label: 'Menuju TP', color: '#34d399' },
+  MENDEKATI_SL: { label: 'Mendekati SL', color: '#f87171' },
+  POSITIF: { label: 'Positif (di tengah)', color: '#4ade80' },
+  NEGATIF: { label: 'Negatif (di tengah)', color: '#fb923c' },
+  BELUM_ADA_DATA: { label: 'Belum ada data hari ini', color: '#94a3b8' },
+};
+
+async function loadPendingSignalProgress(batchOffset = 0) {
+  const el = document.getElementById('weekly-pending-progress-content');
+  await _loadIntoBoxedPanel(el, async () => {
+    const params = new URLSearchParams({ batch_limit: '1', batch_offset: String(batchOffset) });
+    const res = await fetch(`/api/weekly/evaluation/pending-progress?${params}`);
+    const data = await res.json();
+    WeeklyState.pendingProgressOffset = batchOffset;
+    renderPendingSignalProgress(el, data);
+  });
+}
+
+function pendingProgressPullTimeLabel(pulledAt) {
+  if (!pulledAt) return '';
+  // pulled_at is a SQLite CURRENT_TIMESTAMP string "YYYY-MM-DD HH:MM:SS" (UTC) —
+  // just show the time part, enough to tell same-day pulls apart.
+  const parts = String(pulledAt).split(' ');
+  return parts[1] ? ` · ditarik jam ${parts[1].slice(0, 5)}` : '';
+}
+
+function renderPendingSignalProgress(el, data) {
+  const batches = data.batches || [];
+  const totalBatches = data.total_batches || 0;
+  const offset = data.batch_offset || 0;
+
+  if (batches.length === 0 || !batches[0].signals || batches[0].signals.length === 0) {
+    el.innerHTML = `
+      <div class="text-muted small">Tidak ada sinyal yang sedang berjalan (belum matang) saat ini. Setiap tarikan baru akan otomatis muncul di sini, terbagi per halaman, sampai genap horizon-nya.</div>
+    `;
+    return;
+  }
+
+  const batch = batches[0];
+  const rows = batch.signals.map(s => {
+    const meta = PENDING_PROGRESS_STATE_META[s.progress_state] || { label: s.progress_state, color: '#94a3b8' };
+    const retColor = s.running_return === null || s.running_return === undefined ? '#94a3b8' : (s.running_return >= 0 ? '#34d399' : '#f87171');
+    const retText = s.running_return === null || s.running_return === undefined ? '—' : `${s.running_return >= 0 ? '+' : ''}${(s.running_return * 100).toFixed(2)}%`;
+    const probText = s.signal_probability !== null && s.signal_probability !== undefined ? `${s.signal_probability.toFixed(1)}%` : '—';
+    return `
+      <tr>
+        <td><strong>${s.ticker}</strong></td>
+        <td>${probText}</td>
+        <td>Hari ${s.days_elapsed}/${s.horizon_days} (sisa ${s.days_remaining})</td>
+        <td>${s.entry_price !== null ? s.entry_price.toLocaleString('id-ID') : '—'}</td>
+        <td>${s.current_price !== null ? s.current_price.toLocaleString('id-ID') : '—'}${s.last_price_date ? ` <span class="text-muted small">(${s.last_price_date})</span>` : ''}</td>
+        <td style="color:${retColor}; font-weight:600">${retText}</td>
+        <td>${s.target_price !== null ? s.target_price.toLocaleString('id-ID') : '—'}</td>
+        <td>${s.stop_price !== null ? s.stop_price.toLocaleString('id-ID') : '—'}</td>
+        <td style="color:${meta.color}; font-weight:600">${meta.label}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const currentPage = offset + 1;
+  const pagination = `
+    <div class="dq-table-info" style="margin-top:10px">
+      <span>Halaman ${currentPage} dari ${totalBatches} tarikan yang masih berjalan (terbaru dulu)</span>
+      <span>
+        <button class="btn-secondary" style="padding:4px 10px;font-size:12px" ${offset <= 0 ? 'disabled' : ''}
+          onclick="loadPendingSignalProgress(${Math.max(0, offset - 1)})">← Lebih Baru</button>
+        <button class="btn-secondary" style="padding:4px 10px;font-size:12px" ${offset + 1 >= totalBatches ? 'disabled' : ''}
+          onclick="loadPendingSignalProgress(${offset + 1})">Lebih Lama →</button>
+      </span>
+    </div>
+  `;
+
+  el.innerHTML = `
+    <div class="dq-table-info" style="margin-bottom:6px">
+      <span><strong>Tarikan ${batch.prediction_date}${pendingProgressPullTimeLabel(batch.pulled_at)}</strong></span>
+      <span>${batch.n} sinyal berjalan · <span style="color:#34d399">${batch.menuju_tp} menuju TP</span> · <span style="color:#f87171">${batch.mendekati_sl} mendekati SL</span></span>
+    </div>
+    <table class="mini-table">
+      <thead>
+        <tr>
+          <th>Saham</th><th>Probabilitas</th><th>Progres Hari</th><th>Harga Masuk</th>
+          <th>Harga Terkini</th><th>Perubahan Sementara</th><th>Target TP</th><th>Stop Loss</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
     ${pagination}
   `;
 }
@@ -1390,6 +1542,14 @@ function renderWeeklyEvaluation(el, data) {
     ${maturityBanner}
     ${staleModelBanner}
 
+    <div class="dq-section">
+      <div class="dqs-title">⏱️ Progres Sinyal Berjalan (Belum Matang)</div>
+      <div class="dq-boxed-panel">
+        <div class="text-muted small mb-1">Sinyal yang sudah ditarik tapi belum genap ${dm.min_horizon_days || 5} hari bursa — harga TERKINI dibanding harga masuk. Ini progres SEMENTARA, bukan hasil akhir (baru final HIT/MISS setelah cukup umur).</div>
+        <div id="weekly-pending-progress-content"><div class="loading-spinner"><span class="spinner"></span> Memuat...</div></div>
+      </div>
+    </div>
+
     ${!hasData ? `
       <div class="dq-section">
         <div class="text-muted mt-2">Belum ada sinyal yang matang dan terverifikasi. Dashboard ini otomatis terisi setiap hari
@@ -1421,7 +1581,9 @@ function renderWeeklyEvaluation(el, data) {
 
       <div class="dq-section">
         <div class="dqs-title">🏆 Top 10 Sinyal — Probabilitas Tertinggi Saat Diberikan</div>
-        <div id="weekly-evaluation-top10-content"></div>
+        <div class="dq-boxed-panel">
+          <div id="weekly-evaluation-top10-content"></div>
+        </div>
       </div>
 
       <div class="dq-section">
@@ -1571,6 +1733,27 @@ async function triggerEvaluationRun() {
     const data = await res.json();
 
     if (!data.ok) {
+      // Blocked because another ML job (training/predict/pipeline) is using
+      // the same model_run rows right now — not an error. Wait for it to
+      // finish and retry automatically instead of leaving the user stuck.
+      if (/proses lain/i.test(data.message || '')) {
+        if (WeeklyState.evaluationBlockedPolling) clearInterval(WeeklyState.evaluationBlockedPolling);
+        if (logEl) logEl.innerHTML = `<span style="color:#fbbf24">⏳ ${data.message} Akan dicoba otomatis begitu selesai...</span>`;
+        WeeklyState.evaluationBlockedPolling = setInterval(async () => {
+          try {
+            const statusRes = await fetch('/api/weekly/status');
+            const s = await statusRes.json();
+            if (!s.any_job_running) {
+              clearInterval(WeeklyState.evaluationBlockedPolling);
+              WeeklyState.evaluationBlockedPolling = null;
+              triggerEvaluationRun();
+            }
+          } catch (e) {
+            // ignore, keep polling
+          }
+        }, 5000);
+        return;
+      }
       if (logEl) logEl.innerHTML = `<span style="color:#f87171">❌ ${data.message}</span>`;
       if (btn) btn.disabled = false;
       return;

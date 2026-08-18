@@ -70,6 +70,7 @@ try:
         handle_evaluation as ml_weekly_evaluation,
         handle_evaluation_signals as ml_weekly_evaluation_signals,
         handle_evaluation_top_signals as ml_weekly_evaluation_top_signals,
+        handle_evaluation_pending_progress as ml_weekly_evaluation_pending_progress,
         start_evaluation_job as ml_weekly_evaluation_run,
         get_evaluation_job_status as ml_weekly_evaluation_run_status,
         handle_ihsg_analysis as ml_weekly_ihsg,
@@ -124,7 +125,7 @@ def run_recent_sync() -> None:
         "--workers", "2",
         "--delay", "0.8",
         "--refresh-recent", "14",
-        "--retries", "4",
+        "--retries", "7",
     ]
     try:
         result = subprocess.run(
@@ -164,17 +165,36 @@ def run_recent_sync() -> None:
                         "--start", (date.today() - timedelta(days=35)).isoformat(),
                         "--end", date.today().isoformat(),
                         "--workers", "2", "--delay", "0.8",
-                        "--refresh-recent", "14", "--retries", "4",
+                        "--refresh-recent", "14", "--retries", "7",
                     ],
                     cwd=ROOT, capture_output=True, text=True,
-                    encoding="utf-8", errors="replace", timeout=10 * 60, check=False,
+                    encoding="utf-8", errors="replace", timeout=14 * 60, check=False,
                 )
+                index_stdout = (index_result.stdout or "").strip()
                 index_output = "\n".join(
-                    p for p in ((index_result.stdout or "").strip(), (index_result.stderr or "").strip()) if p
+                    p for p in (index_stdout, (index_result.stderr or "").strip()) if p
                 )
                 output = f"{output}\n\n[Indeks IHSG]\n{index_output}".strip()
+                # The banner's status must reflect BOTH legs, not just the stock
+                # sync computed above — otherwise a failed index leg can render
+                # as a green "success" banner (or vice versa) while the visible
+                # message text says otherwise.
+                if index_result.returncode not in (0, None) and not (
+                    index_result.returncode == 1 and "gagal=0" in index_stdout
+                ):
+                    status = "failed"
             except Exception as index_error:
                 output = f"{output}\n\n[Indeks IHSG] Error: {type(index_error).__name__}: {index_error}".strip()
+                status = "failed"
+
+        if status == "failed" and "gagal=" in output:
+            output += (
+                "\n\nCatatan: IDX kadang membatasi permintaan otomatis selama beberapa "
+                "menit (bukan error permanen di aplikasi). Tanggal yang gagal akan "
+                "dicoba ulang otomatis pada sinkronisasi berikutnya — jika masih gagal "
+                "setelah beberapa kali coba dalam rentang waktu berbeda, baru itu tanda "
+                "ada masalah nyata."
+            )
 
         with SYNC_LOCK:
             SYNC_STATE.update({
@@ -1021,6 +1041,8 @@ class AppHandler(BaseHTTPRequestHandler):
                         return self.send_json(ml_weekly_evaluation_signals(str(DB_PATH), query))
                     if path == "/api/weekly/evaluation/top-signals":
                         return self.send_json(ml_weekly_evaluation_top_signals(str(DB_PATH), query))
+                    if path == "/api/weekly/evaluation/pending-progress":
+                        return self.send_json(ml_weekly_evaluation_pending_progress(str(DB_PATH), query))
                     if path == "/api/weekly/evaluation/run/status":
                         return self.send_json(ml_weekly_evaluation_run_status())
                     if path == "/api/weekly/ihsg":

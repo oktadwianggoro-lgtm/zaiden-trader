@@ -334,27 +334,37 @@ def list_top_signals_by_batch(
 ) -> dict:
     """
     "Top N PER TARIKAN" view — not one flat top-N pooled across all history.
-    Every distinct prediction_date is one prediction run ("tarikan"); within
-    each batch, only that batch's own top-N signals by the probability the
-    model actually gave at the time are shown. So "4 tarikan x 10 = 40, dari
-    situ berapa yang berhasil" is answerable exactly as asked, and grows
-    batch by batch as more signals mature — paginated over BATCHES
-    (batch_offset/batch_limit), with an aggregate computed across ALL
-    batches (not just the page being viewed) so the running total is always
-    correct regardless of which page is open.
+    One batch = one actual pull (prediction_date, model_run_id) — NOT just
+    the calendar date, since a predict pipeline can run more than once on
+    the same day (e.g. after a retrain finishes mid-afternoon); grouping
+    only by date used to silently merge separate pulls into one table.
+    Within each batch, only that batch's own top-N signals by the
+    probability the model actually gave at the time are shown.
+
+    Batches that haven't fully matured yet are INCLUDED, not hidden until
+    day 5 — each still-pending signal in the top-N shows its LIVE running
+    return against entry (same calc as list_pending_signal_progress) instead
+    of a final HIT/MISS, so "tarikan 4 Agustus, progresnya sekarang apa"
+    is answerable immediately instead of waiting for maturity. Paginated
+    over batches (batch_offset/batch_limit, newest first); the aggregate
+    hit-rate is still computed from MATURED (HIT/MISS) signals only, across
+    ALL batches regardless of which page is open, so it only ever counts
+    outcomes that have actually resolved.
     """
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
 
-    dates = [r[0] for r in conn.execute(
-        """SELECT DISTINCT prediction_date FROM ml_weekly_predictions
-           WHERE outcome_status IN ('HIT','MISS')
-           ORDER BY prediction_date DESC"""
-    ).fetchall()]
-    total_batches = len(dates)
-    page_dates = dates[batch_offset: batch_offset + batch_limit]
+    batch_keys = conn.execute(
+        """SELECT prediction_date, model_run_id, MIN(created_at) AS pulled_at
+           FROM ml_weekly_predictions
+           WHERE outcome_status IN ('HIT','MISS','PENDING')
+           GROUP BY prediction_date, model_run_id
+           ORDER BY prediction_date DESC, pulled_at DESC"""
+    ).fetchall()
+    total_batches = len(batch_keys)
+    page_keys = batch_keys[batch_offset: batch_offset + batch_limit]
 
-    def _row_to_signal(r: sqlite3.Row) -> dict:
+    def _matured_signal(r: sqlite3.Row) -> dict:
         entry = r["current_close"]
         ret = r["realized_return"]
         exit_price = round(entry * (1.0 + ret), 2) if entry is not None and ret is not None else None
@@ -368,44 +378,94 @@ def list_top_signals_by_batch(
             "outcome_status": r["outcome_status"],
             "confidence_tier": r["confidence_tier"],
             "decision_status": r["decision_status"],
+            "is_pending": False,
+            "days_elapsed": None,
+            "days_remaining": None,
+        }
+
+    def _pending_signal(r: sqlite3.Row, pdate: str) -> dict:
+        horizon = r["horizon_days"] or MIN_HORIZON_DAYS
+        entry_price = r["next_open"] if r["next_open"] else r["current_close"]
+        # Same trading-day source/order as evaluate_matured_predictions —
+        # "days_elapsed" here is directly comparable to when it will mature.
+        trading_days = conn.execute(
+            """SELECT tanggal, harga_penutupan FROM ringkasan_saham_harian
+               WHERE tanggal > ? AND kode_saham = ?
+                 AND volume > 0 AND harga_penutupan IS NOT NULL
+               ORDER BY tanggal LIMIT ?""",
+            (pdate, r["ticker"], horizon),
+        ).fetchall()
+        days_elapsed = len(trading_days)
+        current_price = trading_days[-1]["harga_penutupan"] if trading_days else None
+        running_return = (
+            round(current_price / entry_price - 1.0, 4)
+            if current_price and entry_price else None
+        )
+        return {
+            "ticker": r["ticker"],
+            "signal_probability": round(r["calibrated_probability"] * 100.0, 1) if r["calibrated_probability"] is not None else None,
+            "horizon_days": horizon,
+            "entry_price": entry_price,
+            "exit_price": current_price,
+            "pct_change": round(running_return * 100.0, 2) if running_return is not None else None,
+            "outcome_status": "PENDING",
+            "confidence_tier": r["confidence_tier"],
+            "decision_status": r["decision_status"],
+            "is_pending": True,
+            "days_elapsed": days_elapsed,
+            "days_remaining": max(0, horizon - days_elapsed),
         }
 
     batches = []
-    for pdate in page_dates:
+    for key in page_keys:
+        pdate, run_id, pulled_at = key["prediction_date"], key["model_run_id"], key["pulled_at"]
         rows = conn.execute(
-            """SELECT ticker, horizon_days, current_close, realized_return,
+            """SELECT ticker, horizon_days, current_close, next_open, realized_return,
                       outcome_status, confidence_tier, decision_status, calibrated_probability
                FROM ml_weekly_predictions
-               WHERE outcome_status IN ('HIT','MISS') AND prediction_date = ?
+               WHERE outcome_status IN ('HIT','MISS','PENDING')
+                 AND prediction_date = ? AND model_run_id = ?
                ORDER BY calibrated_probability DESC
                LIMIT ?""",
-            (pdate, top_n),
+            (pdate, run_id, top_n),
         ).fetchall()
-        signals = [_row_to_signal(r) for r in rows]
-        hits = sum(1 for s in signals if s["outcome_status"] == "HIT")
+        signals = [
+            _pending_signal(r, pdate) if r["outcome_status"] == "PENDING" else _matured_signal(r)
+            for r in rows
+        ]
+        matured = [s for s in signals if not s["is_pending"]]
+        hits = sum(1 for s in matured if s["outcome_status"] == "HIT")
         batches.append({
             "prediction_date": pdate,
+            "model_run_id": run_id,
+            "pulled_at": pulled_at,
             "n": len(signals),
+            "n_matured": len(matured),
+            "n_pending": len(signals) - len(matured),
             "hits": hits,
-            "hit_rate": round(hits / len(signals), 4) if signals else None,
+            "hit_rate": round(hits / len(matured), 4) if matured else None,
             "signals": signals,
         })
 
-    # Aggregate across EVERY batch (not just this page) via a window
-    # function — cheaper and more honest than looping in Python and risking
-    # drift from what's actually paginated.
+    # Aggregate across EVERY batch (not just this page), matured signals
+    # only — a window function partitioned the same way as the per-batch
+    # top-N above, so "N tarikan x 10 = X, dari situ berapa yang berhasil"
+    # only ever counts outcomes that have actually resolved.
     agg_row = conn.execute(
         """
         WITH ranked AS (
             SELECT outcome_status,
-                   ROW_NUMBER() OVER (PARTITION BY prediction_date ORDER BY calibrated_probability DESC) AS rn
+                   ROW_NUMBER() OVER (PARTITION BY prediction_date, model_run_id ORDER BY calibrated_probability DESC) AS rn
             FROM ml_weekly_predictions
-            WHERE outcome_status IN ('HIT','MISS')
+            WHERE outcome_status IN ('HIT','MISS','PENDING')
         )
         SELECT COUNT(*), SUM(CASE WHEN outcome_status='HIT' THEN 1 ELSE 0 END)
-        FROM ranked WHERE rn <= ?
+        FROM ranked WHERE rn <= ? AND outcome_status IN ('HIT','MISS')
         """,
         (top_n,),
+    ).fetchone()
+    matured_batches_row = conn.execute(
+        "SELECT COUNT(*) FROM (SELECT DISTINCT prediction_date, model_run_id FROM ml_weekly_predictions WHERE outcome_status IN ('HIT','MISS'))"
     ).fetchone()
     conn.close()
 
@@ -419,11 +479,132 @@ def list_top_signals_by_batch(
         "batch_offset": batch_offset,
         "batches": batches,
         "aggregate": {
-            "total_batches": total_batches,
+            "total_batches": matured_batches_row[0] or 0,
             "total_signals": total_signals,
             "total_hits": total_hits,
             "hit_rate": round(total_hits / total_signals, 4) if total_signals else None,
             "hit_rate_ci_lower": round(lo, 4) if total_signals else None,
             "hit_rate_ci_upper": round(hi, 4) if total_signals else None,
         },
+    }
+
+
+def list_pending_signal_progress(
+    db_path: str, batch_limit: int = 1, batch_offset: int = 0,
+) -> dict:
+    """
+    "In-flight" view for HIGH_CONFIDENCE/WATCHLIST signals pulled less than
+    horizon_days trading days ago — outcome_status is still PENDING
+    (evaluate_matured_predictions hasn't finalized HIT/MISS yet), but the
+    user can still ask "sinyal yang saya tarik 4 Agustus, progresnya hari
+    ini apa": how many of the horizon's trading days have elapsed, the
+    latest available price, and the running (unrealized) return vs entry.
+
+    Read-only / display-only by design: this NEVER writes outcome_status or
+    realized_return — those stay exclusively owned by evaluate_matured_predictions,
+    because a mid-flight running return can still reverse before day 5 and must
+    never be mistaken for (or leak into) the final realized outcome.
+
+    One batch = one actual pull (prediction_date, model_run_id), NOT just the
+    calendar date — a predict pipeline can run more than once on the same
+    day (e.g. after a retrain finishes mid-afternoon), and grouping only by
+    date silently merged those separate pulls into one confusing table with
+    the same ticker appearing several times at different prices/targets.
+    Paginated newest-pull-first so every distinct tarikan gets its own page.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+
+    batch_keys = conn.execute(
+        """SELECT prediction_date, model_run_id, MIN(created_at) AS pulled_at
+           FROM ml_weekly_predictions
+           WHERE outcome_status = 'PENDING' AND signal_status IN ('HIGH_CONFIDENCE', 'WATCHLIST')
+           GROUP BY prediction_date, model_run_id
+           ORDER BY prediction_date DESC, pulled_at DESC"""
+    ).fetchall()
+    total_batches = len(batch_keys)
+    page_keys = batch_keys[batch_offset: batch_offset + batch_limit]
+
+    batches = []
+    for key in page_keys:
+        pdate, run_id, pulled_at = key["prediction_date"], key["model_run_id"], key["pulled_at"]
+        rows = conn.execute(
+            """SELECT ticker, horizon_days, current_close, next_open, target_price,
+                      stop_price, calibrated_probability, confidence_tier, decision_status
+               FROM ml_weekly_predictions
+               WHERE outcome_status = 'PENDING' AND signal_status IN ('HIGH_CONFIDENCE', 'WATCHLIST')
+                 AND prediction_date = ? AND model_run_id = ?
+               ORDER BY calibrated_probability DESC""",
+            (pdate, run_id),
+        ).fetchall()
+
+        signals = []
+        for r in rows:
+            horizon = r["horizon_days"] or MIN_HORIZON_DAYS
+            entry_price = r["next_open"] if r["next_open"] else r["current_close"]
+
+            # Same trading-day source and ordering as evaluate_matured_predictions,
+            # so "days_elapsed" here is directly comparable to the day the signal
+            # will actually mature.
+            trading_days = conn.execute(
+                """SELECT tanggal, harga_penutupan FROM ringkasan_saham_harian
+                   WHERE tanggal > ? AND kode_saham = ?
+                     AND volume > 0 AND harga_penutupan IS NOT NULL
+                   ORDER BY tanggal LIMIT ?""",
+                (pdate, r["ticker"], horizon),
+            ).fetchall()
+            days_elapsed = len(trading_days)
+            current_price = trading_days[-1]["harga_penutupan"] if trading_days else None
+            last_price_date = trading_days[-1]["tanggal"] if trading_days else None
+
+            running_return = (
+                round(current_price / entry_price - 1.0, 4)
+                if current_price and entry_price else None
+            )
+
+            if current_price is None:
+                progress_state = "BELUM_ADA_DATA"
+            elif r["target_price"] is not None and current_price >= r["target_price"]:
+                progress_state = "MENUJU_TP"
+            elif r["stop_price"] is not None and current_price <= r["stop_price"]:
+                progress_state = "MENDEKATI_SL"
+            elif running_return is not None and running_return >= 0:
+                progress_state = "POSITIF"
+            else:
+                progress_state = "NEGATIF"
+
+            signals.append({
+                "ticker": r["ticker"],
+                "signal_probability": round(r["calibrated_probability"] * 100.0, 1) if r["calibrated_probability"] is not None else None,
+                "confidence_tier": r["confidence_tier"],
+                "decision_status": r["decision_status"],
+                "horizon_days": horizon,
+                "days_elapsed": days_elapsed,
+                "days_remaining": max(0, horizon - days_elapsed),
+                "entry_price": entry_price,
+                "current_price": current_price,
+                "last_price_date": last_price_date,
+                "target_price": r["target_price"],
+                "stop_price": r["stop_price"],
+                "running_return": running_return,
+                "progress_state": progress_state,
+            })
+
+        batches.append({
+            "prediction_date": pdate,
+            "model_run_id": run_id,
+            "pulled_at": pulled_at,
+            "n": len(signals),
+            "menuju_tp": sum(1 for s in signals if s["progress_state"] == "MENUJU_TP"),
+            "mendekati_sl": sum(1 for s in signals if s["progress_state"] == "MENDEKATI_SL"),
+            "belum_ada_data": sum(1 for s in signals if s["progress_state"] == "BELUM_ADA_DATA"),
+            "signals": signals,
+        })
+
+    conn.close()
+    return {
+        "total_batches": total_batches,
+        "batch_limit": batch_limit,
+        "batch_offset": batch_offset,
+        "batches": batches,
     }

@@ -67,6 +67,26 @@ class MLConfig:
     # --- Signal Thresholds ---
     min_probability: float = 0.70           # Minimum to show in watchlist
     high_confidence_threshold: float = 0.85 # Default threshold for HC signal
+    # 2026-08-08: tried lowering this to 0.65 (reasoning: 5 retrains all
+    # landed ~67-68% holdout precision at threshold~0.77, never near 90%, so
+    # QUALIFIED was permanently unreachable). REVERTED — that change made
+    # things WORSE, not better: select_threshold's "max coverage subject to
+    # validation precision >= target" always converges to the LOWEST
+    # threshold that clears the bar. At target=0.65 that turned out to be
+    # threshold=0.50 (validation precision 65.8%, n=12,711, tight CI — not
+    # noise) — but HOLDOUT precision at threshold=0.50 was only 50.7%
+    # (n=19,698), i.e. coin-flip, a WORSE validation->holdout gap than
+    # target=0.90 ever produced (which consistently converged to ~0.75-0.77,
+    # holding ~67% on holdout across 5 independent runs — see
+    # tests/test_ml_weekly_predict.py::test_precision_target_search_stability
+    # if/when that regression test is added). 0.90 is not an accurate
+    # precision LABEL (it never verifies), but empirically it's the value
+    # that keeps the search anchored in the threshold zone that actually
+    # generalizes. Don't lower this again without also fixing the search to
+    # penalize the validation/holdout gap directly — see
+    # compute_decision_status / VERIFIED_HOLDOUT_STATUSES for the (correct,
+    # untouched) safety net that keeps low-confidence thresholds capped at
+    # WATCHLIST regardless of this value.
     precision_target: float = 0.90          # Target precision
     min_validation_signals: int = 30        # Min signals for validation
     min_holdout_signals: int = 50           # Min signals for holdout evaluation

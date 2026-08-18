@@ -177,7 +177,10 @@ def fetch_day(session: IdxSession, day: date, retries: int) -> FetchResult:
         except (URLError, TimeoutError, ValueError, json.JSONDecodeError) as error:
             last_error = str(error)
         if attempt < retries:
-            wait = min(2 ** (attempt - 1), 30) + random.uniform(0.1, 0.6)
+            # See tools/sync_idx_daily.py's fetch_day for why the cap was raised
+            # from 30s to 45s — IDX's automated-request blocks tend to last
+            # minutes, not seconds.
+            wait = min(2 ** (attempt - 1), 45) + random.uniform(0.1, 0.6)
             time.sleep(wait)
     return FetchResult(day, "failed", [], 0, retries, last_status, last_error)
 

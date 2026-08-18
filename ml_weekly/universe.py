@@ -45,6 +45,7 @@ def build_universe(
     min_median_freq_20d: float = 30.0,
     min_price: float = 50.0,
     max_zero_vol_ratio: float = 0.20,
+    max_days_since_active: int = 3,
     lookback_days: int = 252,
     conn: sqlite3.Connection | None = None,
 ) -> pd.DataFrame:
@@ -198,7 +199,17 @@ def build_universe(
                 return UniverseStatus.INSUFFICIENT_HISTORY.value
             if row["close_20d"] < min_price and row["close_20d"] > 0:
                 return UniverseStatus.PENNY_STOCK.value
-            if row["days_since_active"] > 10:
+            # A genuinely suspended stock's daily row still exists (IDX keeps
+            # publishing it with volume=0 and harga_penutupan frozen at the
+            # last traded price) — it doesn't disappear from the table, so
+            # this has to check trading INACTIVITY, not missing rows. Found
+            # via RGAS: 7 straight zero-volume days sailed through the old
+            # >10-day threshold and still got scored/signaled with a fake
+            # "current price" that hadn't actually traded in over a week.
+            # 3 days is tight enough to catch a fresh suspension fast while
+            # tolerating a single quiet session on a legitimately thin stock
+            # (max_zero_vol_ratio below already screens out chronic thinness).
+            if row["days_since_active"] > max_days_since_active:
                 return UniverseStatus.SUSPENDED.value
             if row["zero_vol_ratio"] > max_zero_vol_ratio:
                 return UniverseStatus.SUSPENDED.value

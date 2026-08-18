@@ -225,9 +225,18 @@ def select_threshold(
     best_threshold = 0.85
     best_coverage = 0.0
     best_metrics = {}
+    highest_precision_threshold = None
+    highest_precision_metrics = None
 
     for thr in candidates:
         m = evaluate_predictions(y_true, y_prob, thr, returns=returns)
+        if m["signal_count"] >= min_signals:
+            # Tracked regardless of whether it clears precision_target, so the
+            # fallback below has a real "best we could actually do" answer
+            # instead of a number disconnected from what the model outputs.
+            if highest_precision_metrics is None or m["precision"] > highest_precision_metrics["precision"]:
+                highest_precision_threshold = thr
+                highest_precision_metrics = m
         if (
             m["signal_count"] >= min_signals and
             m["precision"] >= precision_target and
@@ -239,9 +248,20 @@ def select_threshold(
             best_metrics = m
 
     if not best_metrics:
-        # No threshold meets criteria — use highest precision we can get
-        best_threshold = 0.90
-        best_metrics = evaluate_predictions(y_true, y_prob, best_threshold, returns=returns)
+        # No threshold clears precision_target with enough signals. Fall back
+        # to whichever candidate had the HIGHEST actual precision (not a
+        # hardcoded number unrelated to what this model outputs — see
+        # config.precision_target's 2026-08-08 note for why a fixed 0.90
+        # fallback here silently made QUALIFIED unreachable for every retrain
+        # regardless of real model skill). Still flagged as unverified so
+        # downstream gating (compute_decision_status) keeps treating it as
+        # WATCHLIST-at-best until a holdout evaluation actually confirms it.
+        if highest_precision_metrics is not None:
+            best_threshold = highest_precision_threshold
+            best_metrics = highest_precision_metrics
+        else:
+            best_threshold = 0.85
+            best_metrics = evaluate_predictions(y_true, y_prob, best_threshold, returns=returns)
         best_metrics["threshold_warning"] = "NO_THRESHOLD_MEETS_PRECISION_TARGET"
 
     return float(best_threshold), best_metrics

@@ -978,6 +978,22 @@ def handle_evaluation_top_signals(db_path: str, query: dict) -> dict:
     return list_top_signals_by_batch(db_path, top_n=top_n, batch_limit=batch_limit, batch_offset=batch_offset)
 
 
+def handle_evaluation_pending_progress(db_path: str, query: dict) -> dict:
+    """GET /api/weekly/evaluation/pending-progress — in-flight (not-yet-matured)
+    signal progress, paginated one actual pull (prediction_date + model_run_id)
+    per page, newest first — every distinct tarikan gets its own page, even
+    if two pulls landed on the same calendar date."""
+    from .evaluation import list_pending_signal_progress
+
+    def qv(name, default=""):
+        vals = query.get(name)
+        return vals[0] if vals else default
+
+    batch_limit = max(1, min(int(qv("batch_limit", "1") or 1), 30))
+    batch_offset = max(0, int(qv("batch_offset", "0") or 0))
+    return list_pending_signal_progress(db_path, batch_limit=batch_limit, batch_offset=batch_offset)
+
+
 def get_evaluation_job_status() -> dict:
     with EVAL_LOCK:
         return dict(EVAL_STATE)
